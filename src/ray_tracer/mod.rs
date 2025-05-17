@@ -1,5 +1,4 @@
-mod camera;
-mod param;
+pub mod param;
 mod resource;
 
 use std::{collections::HashMap, mem::size_of};
@@ -77,7 +76,6 @@ impl RayTracer {
                         param1: 0.0,
                     },
                 },
-
                 // left
                 resource::Sphere {
                     center: cgmath::Vector3::new(-1.0, 0.0, -1.0),
@@ -97,7 +95,6 @@ impl RayTracer {
                         param1: 1.0 / 1.5,
                     },
                 },
-
                 // right
                 resource::Sphere {
                     center: cgmath::Vector3::new(1.0, 0.0, -1.0),
@@ -116,7 +113,7 @@ impl RayTracer {
             resource::UniformBuffer::new(device, &stat.clone().into(), Some("Ray Tracer State"));
         let param_uniform = resource::UniformBuffer::new(
             device,
-            &param.clone().into_param(),
+            &param.clone().into_gpu(),
             Some("Ray Tracer Parameter"),
         );
         let frame_buffer_storage = resource::StorageBuffer::new_with_size(
@@ -260,14 +257,13 @@ impl RayTracer {
         &self.param
     }
 
-    pub fn set_params(&mut self, queue: &wgpu::Queue, param: Param) {
-        if self.param == param {
+    pub fn set_params(&mut self, queue: &wgpu::Queue, param: &Param) {
+        if self.param == *param {
             return;
         }
 
-        self.param_uniform
-            .set_data(queue, &param.clone().into_param());
-        self.param = param;
+        self.param_uniform.set_data(queue, &param.into_gpu());
+        self.param = param.clone();
 
         self.reset();
     }

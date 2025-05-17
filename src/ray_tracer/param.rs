@@ -1,5 +1,3 @@
-use cgmath::InnerSpace;
-
 use super::resource;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -22,11 +20,11 @@ impl Default for Param {
 }
 
 impl Param {
-    pub fn into_param(self) -> resource::Param {
+    pub fn into_gpu(&self) -> resource::Param {
         resource::Param {
             camera: self
                 .camera
-                .into_camera(self.display_size.x as f32 / self.display_size.y as f32),
+                .into_gpu(self.display_size.x as f32 / self.display_size.y as f32),
             display_size: self.display_size,
             max_bounce: self.max_bounce,
         }
@@ -36,8 +34,8 @@ impl Param {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CameraParam {
     pub position: cgmath::Vector3<f32>,
-    pub look_at: cgmath::Vector3<f32>,
-    pub up: cgmath::Vector3<f32>,
+    pub yaw: f32,
+    pub pitch: f32,
     pub fov: f32,
     pub aperture: f32,
     pub focus_distance: f32,
@@ -47,8 +45,8 @@ impl Default for CameraParam {
     fn default() -> Self {
         Self {
             position: cgmath::Vector3::new(0.0, 0.0, 0.0),
-            look_at: cgmath::Vector3::new(0.0, 0.0, -1.0),
-            up: cgmath::Vector3::new(0.0, 1.0, 0.0),
+            yaw: 0.0,
+            pitch: 0.0,
             fov: 90.0,
             aperture: 0.0,
             focus_distance: 1.0,
@@ -57,10 +55,12 @@ impl Default for CameraParam {
 }
 
 impl CameraParam {
-    pub fn into_camera(self, aspect_ratio: f32) -> resource::Camera {
-        let w = (self.position - self.look_at).normalize();
-        let u = self.up.cross(w).normalize();
-        let v = w.cross(u).normalize();
+    pub fn into_gpu(&self, aspect_ratio: f32) -> resource::Camera {
+        let rot_matrix = cgmath::Matrix3::from_angle_y(cgmath::Deg(self.yaw))
+            * cgmath::Matrix3::from_angle_x(cgmath::Deg(self.pitch));
+        let w = rot_matrix * cgmath::vec3(0.0, 0.0, 1.0);
+        let u = rot_matrix * cgmath::vec3(1.0, 0.0, 0.0);
+        let v = rot_matrix * cgmath::vec3(0.0, 1.0, 0.0);
 
         let fov = self.fov.to_radians();
         let height = self.focus_distance * (fov / 2.0).tan();
@@ -68,7 +68,7 @@ impl CameraParam {
 
         let start = self.position - width * u + height * v - self.focus_distance * w;
 
-        let result = resource::Camera {
+        resource::Camera {
             position: self.position,
             horizontal: u,
             vertical: v,
@@ -78,8 +78,6 @@ impl CameraParam {
             vy: (-2.0 * height * v),
 
             lens_radius: self.aperture / 2.0,
-        };
-
-        result
+        }
     }
 }
