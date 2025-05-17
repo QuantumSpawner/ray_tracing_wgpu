@@ -1,53 +1,19 @@
 mod camera;
+mod param;
 mod resource;
 
 use std::{collections::HashMap, mem::size_of};
 
 use crate::wgpu;
 
+pub use param::CameraParam;
+pub use param::Param;
+
 const WORKGROUP_SIZE_X: u32 = 16;
 const WORKGROUP_SIZE_Y: u32 = 16;
 
 const MAX_WINDOW_SIZE_X: u32 = 1920;
 const MAX_WINDOW_SIZE_Y: u32 = 1080;
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Sampling {
-    pub max_samples: u32,
-    pub num_bounces: u32,
-}
-
-impl Default for Sampling {
-    fn default() -> Self {
-        Self {
-            max_samples: 256,
-            num_bounces: 8,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Param {
-    pub sampling: Sampling,
-    pub display_size: cgmath::Vector2<u32>,
-}
-
-impl Default for Param {
-    fn default() -> Self {
-        Self {
-            sampling: Sampling::default(),
-            display_size: cgmath::Vector2::new(1, 1),
-        }
-    }
-}
-
-impl Into<resource::Param> for Param {
-    fn into(self) -> resource::Param {
-        resource::Param {
-            display_size: self.display_size.into(),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Default, PartialEq)]
 struct Stat {
@@ -63,11 +29,11 @@ impl Into<resource::Stat> for Stat {
 }
 
 pub struct RayTracer {
-    param: Param,
     stat: Stat,
+    param: Param,
 
-    param_uniform: resource::UniformBuffer<resource::Param>,
     stat_uniform: resource::UniformBuffer<resource::Stat>,
+    param_uniform: resource::UniformBuffer<resource::Param>,
     _frame_buffer: resource::StorageBuffer,
 
     render_pipeline: wgpu::RenderPipeline,
@@ -87,15 +53,12 @@ impl RayTracer {
         let stat = Stat::default();
 
         /* resource-----------------------------------------------------------*/
-        let param_uniform = resource::UniformBuffer::new_with_data(
+        let stat_uniform =
+            resource::UniformBuffer::new(device, &stat.clone().into(), Some("Ray Tracer State"));
+        let param_uniform = resource::UniformBuffer::new(
             device,
-            param.clone().into(),
+            &param.clone().into_param(),
             Some("Ray Tracer Parameter"),
-        );
-        let stat_uniform = resource::UniformBuffer::new_with_data(
-            device,
-            stat.clone().into(),
-            Some("Ray Tracer State"),
         );
         let frame_buffer = resource::StorageBuffer::new(
             device,
@@ -116,7 +79,7 @@ impl RayTracer {
 
         let (render_bind_group_layout, render_bind_group) = create_bind_group(
             device,
-            &[&param_uniform, &stat_uniform, &frame_buffer],
+            &[&frame_buffer, &stat_uniform, &param_uniform],
             wgpu::ShaderStages::FRAGMENT,
             Some("Ray Tracer Render"),
         );
@@ -153,7 +116,7 @@ impl RayTracer {
         /* compute shader-----------------------------------------------------*/
         let compute_shader_source = [
             include_str!("shader/resource.wgsl"),
-            include_str!("shader/rng.wgsl"),
+            include_str!("shader/util.wgsl"),
             include_str!("shader/compute.wgsl"),
         ]
         .join("\n");
@@ -164,7 +127,7 @@ impl RayTracer {
 
         let (compute_bind_group_layout, compute_bind_group) = create_bind_group(
             device,
-            &[&param_uniform, &stat_uniform, &frame_buffer],
+            &[&frame_buffer, &stat_uniform, &param_uniform],
             wgpu::ShaderStages::COMPUTE,
             Some("Ray Tracer Comupte"),
         );
@@ -194,11 +157,11 @@ impl RayTracer {
         });
 
         Self {
-            param,
             stat,
+            param,
 
-            param_uniform,
             stat_uniform,
+            param_uniform,
             _frame_buffer: frame_buffer,
 
             render_pipeline,
@@ -218,18 +181,19 @@ impl RayTracer {
             return;
         }
 
-        self.param_uniform.set_data(queue, param.clone().into());
+        self.param_uniform
+            .set_data(queue, &param.clone().into_param());
         self.param = param;
 
         self.reset();
     }
 
     pub fn update(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
-        if self.stat.frame_counter >= self.param.sampling.max_samples {
+        if self.stat.frame_counter >= self.param.max_sample {
             return;
         }
 
-        self.stat_uniform.set_data(queue, self.stat.clone().into());
+        self.stat_uniform.set_data(queue, &self.stat.clone().into());
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Ray Tracer Compute Encoder"),

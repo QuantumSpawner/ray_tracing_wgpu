@@ -15,11 +15,11 @@ const FULL_SCREEN_QUAD = array<vec4<f32>, 3>(
 );
 
 /* uniform--------------------------------------------------------------------*/
-@group(0) @binding(0) var<uniform> param: Param;
 @group(0) @binding(1) var<uniform> stat: Stat;
+@group(0) @binding(2) var<uniform> param: Param;
 
 /* buffer---------------------------------------------------------------------*/
-@group(0) @binding(2) var<storage, read_write> frame: array<vec3<f32>>;
+@group(0) @binding(0) var<storage, read_write> frame: array<vec3<f32>>;
 
 /* function-------------------------------------------------------------------*/
 @vertex
@@ -34,5 +34,5 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VertexOutput {
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let idx = u32(in.tex_coord.x * f32(param.window_size.x)) +
         u32(in.tex_coord.y * f32(param.window_size.y)) * param.window_size.x + 1;
-    return vec4<f32>(frame[idx] / f32(stat.frame_counter + 1), 1.0);
+    return vec4<f32>(sqrt(frame[idx] / f32(stat.frame_counter + 1)), 1.0);
 }

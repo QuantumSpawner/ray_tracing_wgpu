@@ -1,8 +1,20 @@
-// adapted from [Nelarius/weekend-raytracer-wgpu]
-// (https://github.com/Nelarius/weekend-raytracer-wgpu/blob/main/src/raytracer/raytracer.wgsl#L531)
-
 const PI = 3.1415927f;
 
+struct Ray {
+    origin: vec3<f32>,
+    direction: vec3<f32>,
+}
+
+fn ray_new(origin: vec3<f32>, direction: vec3<f32>) -> Ray {
+    return Ray(origin, normalize(direction));
+}
+
+fn ray_at(ray: Ray, t: f32) -> vec3<f32> {
+    return ray.origin + t * ray.direction;
+}
+
+// random number generator adapted from [Nelarius/weekend-raytracer-wgpu]
+// (https://github.com/Nelarius/weekend-raytracer-wgpu/blob/main/src/raytracer/raytracer.wgsl#L531)
 var<private> _rng: u32;
 
 fn rng_init(pixel: vec2<u32>, resolution: vec2<u32>, frame: u32) {
@@ -25,12 +37,12 @@ fn rng_f32() -> f32 {
     return f32(x) / f32(0xffffffffu);
 }
 
-fn rng_unit_disk_f32() -> vec3<f32> {
+fn rng_unit_disk_f32() -> vec2<f32> {
     let r = sqrt(rng_f32());
     let alpha = 2 * PI * rng_f32();
     let x = r * cos(alpha);
     let y = r * sin(alpha);
-    return vec3<f32>(x, y, 0);
+    return vec2<f32>(x, y);
 }
 
 fn rng_unit_sphere_f32() -> vec3<f32> {

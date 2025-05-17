@@ -1,18 +1,31 @@
-use crate::wgpu;
+use std::marker::PhantomData;
 
 use image::GenericImageView;
 use wgpu::util::DeviceExt;
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Default, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct Param {
-    pub display_size: [u32; 2],
-}
+use crate::wgpu;
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Default, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Debug, Clone, encase::ShaderType)]
 pub struct Stat {
     pub frame_counter: u32,
+}
+
+#[derive(Debug, Clone, encase::ShaderType)]
+pub struct Param {
+    pub camera: Camera,
+    pub display_size: cgmath::Vector2<u32>,
+    pub max_bounce: u32,
+}
+
+#[derive(Debug, Clone, encase::ShaderType)]
+pub struct Camera {
+    pub position: cgmath::Vector3<f32>,
+    pub horizontal: cgmath::Vector3<f32>,
+    pub vertical: cgmath::Vector3<f32>,
+    pub start: cgmath::Vector3<f32>,
+    pub vx: cgmath::Vector3<f32>,
+    pub vy: cgmath::Vector3<f32>,
+    pub lens_radius: f32,
 }
 
 pub trait Layout {
@@ -22,34 +35,33 @@ pub trait Layout {
 
 pub struct UniformBuffer<T> {
     buffer: wgpu::Buffer,
-    data: T,
+    writer: encase::UniformBuffer<Vec<u8>>,
+    __marker: PhantomData<T>,
 }
 
-impl<T: Default + bytemuck::Pod> UniformBuffer<T> {
-    pub fn new(device: &wgpu::Device, label: Option<&str>) -> Self {
-        Self::new_with_data(device, T::default(), label)
-    }
-}
+impl<T: encase::ShaderType + encase::internal::WriteInto> UniformBuffer<T> {
+    pub fn new(device: &wgpu::Device, data: &T, label: Option<&str>) -> Self {
+        let mut writer = encase::UniformBuffer::new(Vec::<u8>::new());
 
-impl<T: bytemuck::Pod> UniformBuffer<T> {
-    pub fn new_with_data(device: &wgpu::Device, data: T, label: Option<&str>) -> Self {
+        writer.write(data).unwrap();
+
         let label = label.map(|l| format!("{l} Uniform Buffer"));
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            contents: bytemuck::cast_slice(&[data]),
+            contents: writer.as_ref(),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             label: label.as_deref(),
         });
 
-        Self { buffer, data }
+        Self {
+            buffer,
+            writer,
+            __marker: PhantomData::default(),
+        }
     }
 
-    pub fn get_data(&self) -> &T {
-        &self.data
-    }
-
-    pub fn set_data(&mut self, queue: &wgpu::Queue, data: T) {
-        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[data]));
-        self.data = data;
+    pub fn set_data(&mut self, queue: &wgpu::Queue, data: &T) {
+        self.writer.write(data).unwrap();
+        queue.write_buffer(&self.buffer, 0, self.writer.as_ref());
     }
 }
 
