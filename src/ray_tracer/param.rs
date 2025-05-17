@@ -49,7 +49,7 @@ impl Default for CameraParam {
             position: cgmath::Vector3::new(0.0, 0.0, 0.0),
             look_at: cgmath::Vector3::new(0.0, 0.0, -1.0),
             up: cgmath::Vector3::new(0.0, 1.0, 0.0),
-            fov: 45.0,
+            fov: 90.0,
             aperture: 0.0,
             focus_distance: 1.0,
         }

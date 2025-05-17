@@ -1,16 +1,9 @@
 const PI = 3.1415927f;
 
-struct Ray {
-    origin: vec3<f32>,
-    direction: vec3<f32>,
-}
-
-fn ray_new(origin: vec3<f32>, direction: vec3<f32>) -> Ray {
-    return Ray(origin, normalize(direction));
-}
-
-fn ray_at(ray: Ray, t: f32) -> vec3<f32> {
-    return ray.origin + t * ray.direction;
+fn schlick(cos: f32, ref_idx: f32) -> f32 {
+    var r0 = (1.0 - ref_idx) / (1.0 + ref_idx);
+    r0 = r0 * r0;
+    return r0 + pow((1.0 - r0) * (1.0 - cos), 5.0);
 }
 
 // random number generator adapted from [Nelarius/weekend-raytracer-wgpu]

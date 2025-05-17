@@ -34,13 +34,16 @@ pub struct RayTracer {
 
     stat_uniform: resource::UniformBuffer<resource::Stat>,
     param_uniform: resource::UniformBuffer<resource::Param>,
-    _frame_buffer: resource::StorageBuffer,
+    _frame_buffer_storage: resource::StorageBuffer,
+    _scene_storage: resource::StorageBuffer,
 
     render_pipeline: wgpu::RenderPipeline,
-    render_bind_group: wgpu::BindGroup,
+    render_uniform_bind_group: wgpu::BindGroup,
+    render_storage_bind_group: wgpu::BindGroup,
 
     compute_pipeline: wgpu::ComputePipeline,
-    compute_bind_group: wgpu::BindGroup,
+    compute_uniform_bind_group: wgpu::BindGroup,
+    compute_storage_bind_group: wgpu::BindGroup,
 }
 
 impl RayTracer {
@@ -49,8 +52,64 @@ impl RayTracer {
         _queue: &wgpu::Queue,
         target: wgpu::ColorTargetState,
     ) -> Self {
-        let param = Param::default();
         let stat = Stat::default();
+        let param = Param::default();
+        let scene = resource::Scene {
+            num_sphere: encase::ArrayLength,
+            spheres: vec![
+                // ground
+                resource::Sphere {
+                    center: cgmath::Vector3::new(0.0, -100.5, -1.0),
+                    radius: 100.0,
+                    material: resource::Material {
+                        mat_type: resource::MAT_DIFFUSE,
+                        albedo: cgmath::Vector3::new(0.8, 0.8, 0.0),
+                        param1: 0.0,
+                    },
+                },
+                // center
+                resource::Sphere {
+                    center: cgmath::Vector3::new(0.0, 0.0, -1.2),
+                    radius: 0.5,
+                    material: resource::Material {
+                        mat_type: resource::MAT_DIFFUSE,
+                        albedo: cgmath::Vector3::new(0.1, 0.2, 0.5),
+                        param1: 0.0,
+                    },
+                },
+
+                // left
+                resource::Sphere {
+                    center: cgmath::Vector3::new(-1.0, 0.0, -1.0),
+                    radius: 0.5,
+                    material: resource::Material {
+                        mat_type: resource::MAT_TRANSPARENT,
+                        albedo: cgmath::Vector3::new(1.0, 1.0, 1.0),
+                        param1: 1.5,
+                    },
+                },
+                resource::Sphere {
+                    center: cgmath::Vector3::new(-1.0, 0.0, -1.0),
+                    radius: 0.4,
+                    material: resource::Material {
+                        mat_type: resource::MAT_TRANSPARENT,
+                        albedo: cgmath::Vector3::new(1.0, 1.0, 1.0),
+                        param1: 1.0 / 1.5,
+                    },
+                },
+
+                // right
+                resource::Sphere {
+                    center: cgmath::Vector3::new(1.0, 0.0, -1.0),
+                    radius: 0.5,
+                    material: resource::Material {
+                        mat_type: resource::MAT_REFLECTIVE,
+                        albedo: cgmath::Vector3::new(0.8, 0.6, 0.2),
+                        param1: 0.0,
+                    },
+                },
+            ],
+        };
 
         /* resource-----------------------------------------------------------*/
         let stat_uniform =
@@ -60,11 +119,12 @@ impl RayTracer {
             &param.clone().into_param(),
             Some("Ray Tracer Parameter"),
         );
-        let frame_buffer = resource::StorageBuffer::new(
+        let frame_buffer_storage = resource::StorageBuffer::new_with_size(
             device,
             MAX_WINDOW_SIZE_X as usize * MAX_WINDOW_SIZE_Y as usize * 4 * size_of::<f32>(),
             Some("Ray Tracer Frame Buffer"),
         );
+        let scene_storage = resource::StorageBuffer::new(device, &scene, Some("Ray Tracer Scene"));
 
         /* render shader------------------------------------------------------*/
         let render_shader_source = [
@@ -77,17 +137,27 @@ impl RayTracer {
             source: wgpu::ShaderSource::Wgsl(render_shader_source.into()),
         });
 
-        let (render_bind_group_layout, render_bind_group) = create_bind_group(
+        let (render_uniform_bind_group_layout, render_uniform_bind_group) = create_bind_group(
             device,
-            &[&frame_buffer, &stat_uniform, &param_uniform],
+            &[&stat_uniform, &param_uniform],
             wgpu::ShaderStages::FRAGMENT,
-            Some("Ray Tracer Render"),
+            Some("Ray Tracer Render Uniform"),
+        );
+
+        let (render_storage_bind_group_layout, render_storage_bind_group) = create_bind_group(
+            device,
+            &[&frame_buffer_storage],
+            wgpu::ShaderStages::FRAGMENT,
+            Some("Ray Tracer Render Storage"),
         );
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Ray Tracer Render Pipeline Layout"),
-                bind_group_layouts: &[&render_bind_group_layout],
+                bind_group_layouts: &[
+                    &render_uniform_bind_group_layout,
+                    &render_storage_bind_group_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -117,6 +187,7 @@ impl RayTracer {
         let compute_shader_source = [
             include_str!("shader/resource.wgsl"),
             include_str!("shader/util.wgsl"),
+            include_str!("shader/graphics.wgsl"),
             include_str!("shader/compute.wgsl"),
         ]
         .join("\n");
@@ -125,17 +196,27 @@ impl RayTracer {
             source: wgpu::ShaderSource::Wgsl(compute_shader_source.into()),
         });
 
-        let (compute_bind_group_layout, compute_bind_group) = create_bind_group(
+        let (compute_uniform_bind_group_layout, compute_uniform_bind_group) = create_bind_group(
             device,
-            &[&frame_buffer, &stat_uniform, &param_uniform],
+            &[&stat_uniform, &param_uniform],
             wgpu::ShaderStages::COMPUTE,
             Some("Ray Tracer Comupte"),
+        );
+
+        let (compute_storage_bind_group_layout, compute_storage_bind_group) = create_bind_group(
+            device,
+            &[&frame_buffer_storage, &scene_storage],
+            wgpu::ShaderStages::COMPUTE,
+            Some("Ray Tracer Compute Storage"),
         );
 
         let compute_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Ray Tracer Compute Pipeline Layout"),
-                bind_group_layouts: &[&compute_bind_group_layout],
+                bind_group_layouts: &[
+                    &compute_uniform_bind_group_layout,
+                    &compute_storage_bind_group_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -162,13 +243,16 @@ impl RayTracer {
 
             stat_uniform,
             param_uniform,
-            _frame_buffer: frame_buffer,
+            _frame_buffer_storage: frame_buffer_storage,
+            _scene_storage: scene_storage,
 
             render_pipeline,
-            render_bind_group,
+            render_uniform_bind_group,
+            render_storage_bind_group,
 
             compute_pipeline,
-            compute_bind_group,
+            compute_uniform_bind_group,
+            compute_storage_bind_group,
         }
     }
 
@@ -206,7 +290,8 @@ impl RayTracer {
             });
 
             compute_pass.set_pipeline(&self.compute_pipeline);
-            compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
+            compute_pass.set_bind_group(0, &self.compute_uniform_bind_group, &[]);
+            compute_pass.set_bind_group(1, &self.compute_storage_bind_group, &[]);
             compute_pass.dispatch_workgroups(
                 self.param.display_size.x / WORKGROUP_SIZE_X + 1,
                 self.param.display_size.y / WORKGROUP_SIZE_Y + 1,
@@ -221,7 +306,8 @@ impl RayTracer {
 
     pub fn render(&self, render_pass: &mut wgpu::RenderPass<'_>) {
         render_pass.set_pipeline(&self.render_pipeline);
-        render_pass.set_bind_group(0, &self.render_bind_group, &[]);
+        render_pass.set_bind_group(0, &self.render_uniform_bind_group, &[]);
+        render_pass.set_bind_group(1, &self.render_storage_bind_group, &[]);
         render_pass.draw(0..3, 0..1);
     }
 

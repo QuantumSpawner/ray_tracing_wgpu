@@ -5,6 +5,10 @@ use wgpu::util::DeviceExt;
 
 use crate::wgpu;
 
+pub const MAT_DIFFUSE: u32 = 0;
+pub const MAT_REFLECTIVE: u32 = 1;
+pub const MAT_TRANSPARENT: u32 = 2;
+
 #[derive(Debug, Clone, encase::ShaderType)]
 pub struct Stat {
     pub frame_counter: u32,
@@ -26,6 +30,28 @@ pub struct Camera {
     pub vx: cgmath::Vector3<f32>,
     pub vy: cgmath::Vector3<f32>,
     pub lens_radius: f32,
+}
+
+#[derive(Debug, Clone, encase::ShaderType)]
+pub struct Scene {
+    pub num_sphere: encase::ArrayLength,
+
+    #[size(runtime)]
+    pub spheres: Vec<Sphere>,
+}
+
+#[derive(Debug, Clone, encase::ShaderType)]
+pub struct Sphere {
+    pub center: cgmath::Vector3<f32>,
+    pub radius: f32,
+    pub material: Material,
+}
+
+#[derive(Debug, Clone, encase::ShaderType)]
+pub struct Material {
+    pub mat_type: u32,
+    pub albedo: cgmath::Vector3<f32>,
+    pub param1: f32,
 }
 
 pub trait Layout {
@@ -89,18 +115,47 @@ impl<T> Layout for UniformBuffer<T> {
 
 pub struct StorageBuffer {
     buffer: wgpu::Buffer,
+    writer: encase::StorageBuffer<Vec<u8>>,
 }
 
 impl StorageBuffer {
-    pub fn new(device: &wgpu::Device, size: usize, label: Option<&str>) -> Self {
+    pub fn new<T: encase::ShaderType + encase::internal::WriteInto>(
+        device: &wgpu::Device,
+        data: &T,
+        label: Option<&str>,
+    ) -> Self {
+        let mut writer = encase::StorageBuffer::new(Vec::<u8>::new());
+
+        writer.write(data).unwrap();
+    
+        Self::new_with_slice(device, writer.as_ref(), label)
+    }
+
+    pub fn new_with_size(device: &wgpu::Device, size: usize, label: Option<&str>) -> Self {
+        Self::new_with_slice(device, &vec![0u8; size], label)
+    }
+
+    pub fn new_with_slice(device: &wgpu::Device, data: &[u8], label: Option<&str>) -> Self {
         let label = label.map(|l| format!("{l} Storage Buffer"));
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            contents: &vec![0u8; size],
+            contents: data,
             usage: wgpu::BufferUsages::STORAGE,
             label: label.as_deref(),
         });
 
-        Self { buffer }
+        Self {
+            buffer,
+            writer: encase::StorageBuffer::new(Vec::<u8>::new()),
+        }
+    }
+
+    pub fn set_data<T: encase::ShaderType + encase::internal::WriteInto>(
+        &mut self,
+        queue: &wgpu::Queue,
+        data: &T,
+    ) {
+        self.writer.write(data).unwrap();
+        queue.write_buffer(&self.buffer, 0, self.writer.as_ref());
     }
 }
 
