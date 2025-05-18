@@ -1,5 +1,6 @@
 pub mod param;
 mod resource;
+mod scene;
 
 use std::{collections::HashMap, mem::size_of};
 
@@ -53,59 +54,10 @@ impl RayTracer {
     ) -> Self {
         let stat = Stat::default();
         let param = Param::default();
+
         let scene = resource::Scene {
             num_sphere: encase::ArrayLength,
-            spheres: vec![
-                // ground
-                resource::Sphere {
-                    center: cgmath::Vector3::new(0.0, -100.5, -1.0),
-                    radius: 100.0,
-                    material: resource::Material {
-                        mat_type: resource::MAT_DIFFUSE,
-                        albedo: cgmath::Vector3::new(0.8, 0.8, 0.0),
-                        param1: 0.0,
-                    },
-                },
-                // center
-                resource::Sphere {
-                    center: cgmath::Vector3::new(0.0, 0.0, -1.2),
-                    radius: 0.5,
-                    material: resource::Material {
-                        mat_type: resource::MAT_DIFFUSE,
-                        albedo: cgmath::Vector3::new(0.1, 0.2, 0.5),
-                        param1: 0.0,
-                    },
-                },
-                // left
-                resource::Sphere {
-                    center: cgmath::Vector3::new(-1.0, 0.0, -1.0),
-                    radius: 0.5,
-                    material: resource::Material {
-                        mat_type: resource::MAT_TRANSPARENT,
-                        albedo: cgmath::Vector3::new(1.0, 1.0, 1.0),
-                        param1: 1.5,
-                    },
-                },
-                resource::Sphere {
-                    center: cgmath::Vector3::new(-1.0, 0.0, -1.0),
-                    radius: 0.4,
-                    material: resource::Material {
-                        mat_type: resource::MAT_TRANSPARENT,
-                        albedo: cgmath::Vector3::new(1.0, 1.0, 1.0),
-                        param1: 1.0 / 1.5,
-                    },
-                },
-                // right
-                resource::Sphere {
-                    center: cgmath::Vector3::new(1.0, 0.0, -1.0),
-                    radius: 0.5,
-                    material: resource::Material {
-                        mat_type: resource::MAT_REFLECTIVE,
-                        albedo: cgmath::Vector3::new(0.8, 0.6, 0.2),
-                        param1: 0.0,
-                    },
-                },
-            ],
+            spheres: scene::random_spheres(),
         };
 
         /* resource-----------------------------------------------------------*/

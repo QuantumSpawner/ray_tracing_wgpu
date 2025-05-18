@@ -44,12 +44,12 @@ pub struct CameraParam {
 impl Default for CameraParam {
     fn default() -> Self {
         Self {
-            position: cgmath::Vector3::new(0.0, 0.0, 0.0),
-            yaw: 0.0,
-            pitch: 0.0,
-            fov: 90.0,
+            position: cgmath::Vector3::new(13.0, 2.0, 3.0),
+            yaw: 80.0,
+            pitch: -5.0,
+            fov: 20.0,
             aperture: 0.0,
-            focus_distance: 1.0,
+            focus_distance: 10.0,
         }
     }
 }

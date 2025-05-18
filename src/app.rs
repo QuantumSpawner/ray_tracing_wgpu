@@ -67,6 +67,8 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.request_repaint();
+
         ctx.input(|input| {
             let yaw = self.param.camera.yaw;
             let forward =
@@ -76,30 +78,25 @@ impl eframe::App for App {
             for event in &input.events {
                 match event {
                     egui::Event::Key {
-                        key,
-                        pressed: true,
-                        modifiers,
-                        ..
-                    } => {
-                        match key {
-                            egui::Key::W => self.param.camera.position += SPEED * forward,
-                            egui::Key::A => self.param.camera.position -= SPEED * right,
-                            egui::Key::S => self.param.camera.position -= SPEED * forward,
-                            egui::Key::D => self.param.camera.position += SPEED * right,
-                            egui::Key::Space => self.param.camera.position.y += SPEED,
-                            _ => {}
-                        };
-
-                        if modifiers.shift {
-                            self.param.camera.position.y -= SPEED;
-                        }
-                    }
+                        key, pressed: true, ..
+                    } => match key {
+                        egui::Key::W => self.param.camera.position += SPEED * forward,
+                        egui::Key::A => self.param.camera.position -= SPEED * right,
+                        egui::Key::S => self.param.camera.position -= SPEED * forward,
+                        egui::Key::D => self.param.camera.position += SPEED * right,
+                        egui::Key::Space => self.param.camera.position.y += SPEED,
+                        _ => {}
+                    },
                     egui::Event::MouseWheel { delta, .. } => {
                         self.param.camera.fov += delta.y * 10.0 * SENSITIVITY;
-                        self.param.camera.fov = self.param.camera.fov.clamp(20.0, 120.0);
+                        self.param.camera.fov = self.param.camera.fov.clamp(10.0, 120.0);
                     }
                     _ => {}
                 }
+            }
+
+            if input.modifiers.shift {
+                self.param.camera.position.y -= SPEED;
             }
         });
 
