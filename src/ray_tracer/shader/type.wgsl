@@ -26,15 +26,20 @@ struct Camera {
     lens_radius: f32,
 }
 
-struct Scene {
-    num_sphere: u32,
-    spheres: array<Sphere>,
+struct Objects {
+    num_objects: u32,
+    objects: array<Object>,
 }
 
-struct Sphere {
+struct Object {
     center: vec3<f32>,
     radius: f32,
-    material: Material,
+    mat_idx: u32,
+}
+
+struct Materials {
+    num_materials: u32,
+    materials: array<Material>,
 }
 
 struct Material {
@@ -42,4 +47,9 @@ struct Material {
     albedo: vec3<f32>,
     // fuzz for reflective, refractive index for transparent
     param1: f32,
+}
+
+struct AABB {
+    min: vec3f,
+    max: vec3f,
 }

@@ -5,55 +5,6 @@ use wgpu::util::DeviceExt;
 
 use crate::wgpu;
 
-pub const MAT_DIFFUSE: u32 = 0;
-pub const MAT_REFLECTIVE: u32 = 1;
-pub const MAT_TRANSPARENT: u32 = 2;
-
-#[derive(Debug, Clone, encase::ShaderType)]
-pub struct Stat {
-    pub frame_counter: u32,
-}
-
-#[derive(Debug, Clone, encase::ShaderType)]
-pub struct Param {
-    pub camera: Camera,
-    pub display_size: cgmath::Vector2<u32>,
-    pub max_bounce: u32,
-}
-
-#[derive(Debug, Clone, encase::ShaderType)]
-pub struct Camera {
-    pub position: cgmath::Vector3<f32>,
-    pub horizontal: cgmath::Vector3<f32>,
-    pub vertical: cgmath::Vector3<f32>,
-    pub start: cgmath::Vector3<f32>,
-    pub vx: cgmath::Vector3<f32>,
-    pub vy: cgmath::Vector3<f32>,
-    pub lens_radius: f32,
-}
-
-#[derive(Debug, Clone, encase::ShaderType)]
-pub struct Scene {
-    pub num_sphere: encase::ArrayLength,
-
-    #[size(runtime)]
-    pub spheres: Vec<Sphere>,
-}
-
-#[derive(Debug, Clone, encase::ShaderType)]
-pub struct Sphere {
-    pub center: cgmath::Vector3<f32>,
-    pub radius: f32,
-    pub material: Material,
-}
-
-#[derive(Debug, Clone, encase::ShaderType)]
-pub struct Material {
-    pub mat_type: u32,
-    pub albedo: cgmath::Vector3<f32>,
-    pub param1: f32,
-}
-
 pub trait Layout {
     fn layout(&self, binding: u32, visibility: wgpu::ShaderStages) -> wgpu::BindGroupLayoutEntry;
     fn binding(&self, binding: u32) -> wgpu::BindGroupEntry<'_>;
@@ -113,12 +64,12 @@ impl<T> Layout for UniformBuffer<T> {
     }
 }
 
-pub struct StorageBuffer {
+pub struct StorageBuffer<const RO: bool> {
     buffer: wgpu::Buffer,
     writer: encase::StorageBuffer<Vec<u8>>,
 }
 
-impl StorageBuffer {
+impl<const RO: bool> StorageBuffer<RO> {
     pub fn new<T: encase::ShaderType + encase::internal::WriteInto>(
         device: &wgpu::Device,
         data: &T,
@@ -127,7 +78,7 @@ impl StorageBuffer {
         let mut writer = encase::StorageBuffer::new(Vec::<u8>::new());
 
         writer.write(data).unwrap();
-    
+
         Self::new_with_slice(device, writer.as_ref(), label)
     }
 
@@ -159,13 +110,13 @@ impl StorageBuffer {
     }
 }
 
-impl Layout for StorageBuffer {
+impl<const RO: bool> Layout for StorageBuffer<RO> {
     fn layout(&self, binding: u32, visibility: wgpu::ShaderStages) -> wgpu::BindGroupLayoutEntry {
         wgpu::BindGroupLayoutEntry {
             binding,
             visibility,
             ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Storage { read_only: false },
+                ty: wgpu::BufferBindingType::Storage { read_only: RO },
                 has_dynamic_offset: false,
                 min_binding_size: None,
             },

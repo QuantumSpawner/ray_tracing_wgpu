@@ -1,4 +1,4 @@
-use super::resource;
+use super::shader_type;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {
@@ -20,11 +20,11 @@ impl Default for Param {
 }
 
 impl Param {
-    pub fn into_gpu(&self) -> resource::Param {
-        resource::Param {
+    pub fn as_shader_type(&self) -> shader_type::Param {
+        shader_type::Param {
             camera: self
                 .camera
-                .into_gpu(self.display_size.x as f32 / self.display_size.y as f32),
+                .as_shader_type(self.display_size.x as f32 / self.display_size.y as f32),
             display_size: self.display_size,
             max_bounce: self.max_bounce,
         }
@@ -55,7 +55,7 @@ impl Default for CameraParam {
 }
 
 impl CameraParam {
-    pub fn into_gpu(&self, aspect_ratio: f32) -> resource::Camera {
+    pub fn as_shader_type(&self, aspect_ratio: f32) -> shader_type::Camera {
         let rot_matrix = cgmath::Matrix3::from_angle_y(cgmath::Deg(self.yaw))
             * cgmath::Matrix3::from_angle_x(cgmath::Deg(self.pitch));
         let w = rot_matrix * cgmath::vec3(0.0, 0.0, 1.0);
@@ -68,7 +68,7 @@ impl CameraParam {
 
         let start = self.position - width * u + height * v - self.focus_distance * w;
 
-        resource::Camera {
+        shader_type::Camera {
             position: self.position,
             horizontal: u,
             vertical: v,

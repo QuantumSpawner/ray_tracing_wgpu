@@ -1,13 +1,15 @@
+mod buffer;
+mod bvh;
+mod object;
 pub mod param;
-mod resource;
 mod scene;
+mod shader_type;
 
 use std::{collections::HashMap, mem::size_of};
 
 use crate::wgpu;
 
-pub use param::CameraParam;
-pub use param::Param;
+pub use param::{CameraParam, Param};
 
 const WORKGROUP_SIZE_X: u32 = 16;
 const WORKGROUP_SIZE_Y: u32 = 16;
@@ -20,9 +22,9 @@ struct Stat {
     pub frame_counter: u32,
 }
 
-impl Into<resource::Stat> for Stat {
-    fn into(self) -> resource::Stat {
-        resource::Stat {
+impl Stat {
+    fn as_shader_type(&self) -> shader_type::Stat {
+        shader_type::Stat {
             frame_counter: self.frame_counter,
         }
     }
@@ -32,10 +34,11 @@ pub struct RayTracer {
     stat: Stat,
     param: Param,
 
-    stat_uniform: resource::UniformBuffer<resource::Stat>,
-    param_uniform: resource::UniformBuffer<resource::Param>,
-    _frame_buffer_storage: resource::StorageBuffer,
-    _scene_storage: resource::StorageBuffer,
+    stat_uniform: buffer::UniformBuffer<shader_type::Stat>,
+    param_uniform: buffer::UniformBuffer<shader_type::Param>,
+    _frame_buffer_storage: buffer::StorageBuffer<false>,
+    _objects_storage: buffer::StorageBuffer<true>,
+    _materials_storage: buffer::StorageBuffer<true>,
 
     render_pipeline: wgpu::RenderPipeline,
     render_uniform_bind_group: wgpu::BindGroup,
@@ -55,29 +58,30 @@ impl RayTracer {
         let stat = Stat::default();
         let param = Param::default();
 
-        let scene = resource::Scene {
-            num_sphere: encase::ArrayLength,
-            spheres: scene::random_spheres(),
-        };
+        let objects = scene::random_spheres();
+        let (objects, materials) = object::as_shader_type(&objects);
 
         /* resource-----------------------------------------------------------*/
         let stat_uniform =
-            resource::UniformBuffer::new(device, &stat.clone().into(), Some("Ray Tracer State"));
-        let param_uniform = resource::UniformBuffer::new(
+            buffer::UniformBuffer::new(device, &stat.as_shader_type(), Some("Ray Tracer State"));
+        let param_uniform = buffer::UniformBuffer::new(
             device,
-            &param.clone().into_gpu(),
+            &param.clone().as_shader_type(),
             Some("Ray Tracer Parameter"),
         );
-        let frame_buffer_storage = resource::StorageBuffer::new_with_size(
+        let frame_buffer_storage = buffer::StorageBuffer::new_with_size(
             device,
             MAX_WINDOW_SIZE_X as usize * MAX_WINDOW_SIZE_Y as usize * 4 * size_of::<f32>(),
             Some("Ray Tracer Frame Buffer"),
         );
-        let scene_storage = resource::StorageBuffer::new(device, &scene, Some("Ray Tracer Scene"));
+        let objects_storage =
+            buffer::StorageBuffer::new(device, &objects, Some("Ray Tracer Objects"));
+        let material_storage =
+            buffer::StorageBuffer::new(device, &materials, Some("Ray Tracer Materials"));
 
         /* render shader------------------------------------------------------*/
         let render_shader_source = [
-            include_str!("shader/resource.wgsl"),
+            include_str!("shader/type.wgsl"),
             include_str!("shader/render.wgsl"),
         ]
         .join("\n");
@@ -134,7 +138,7 @@ impl RayTracer {
 
         /* compute shader-----------------------------------------------------*/
         let compute_shader_source = [
-            include_str!("shader/resource.wgsl"),
+            include_str!("shader/type.wgsl"),
             include_str!("shader/util.wgsl"),
             include_str!("shader/graphics.wgsl"),
             include_str!("shader/compute.wgsl"),
@@ -154,7 +158,7 @@ impl RayTracer {
 
         let (compute_storage_bind_group_layout, compute_storage_bind_group) = create_bind_group(
             device,
-            &[&frame_buffer_storage, &scene_storage],
+            &[&frame_buffer_storage, &objects_storage, &material_storage],
             wgpu::ShaderStages::COMPUTE,
             Some("Ray Tracer Compute Storage"),
         );
@@ -193,7 +197,8 @@ impl RayTracer {
             stat_uniform,
             param_uniform,
             _frame_buffer_storage: frame_buffer_storage,
-            _scene_storage: scene_storage,
+            _objects_storage: objects_storage,
+            _materials_storage: material_storage,
 
             render_pipeline,
             render_uniform_bind_group,
@@ -214,7 +219,7 @@ impl RayTracer {
             return;
         }
 
-        self.param_uniform.set_data(queue, &param.into_gpu());
+        self.param_uniform.set_data(queue, &param.as_shader_type());
         self.param = param.clone();
 
         self.reset();
@@ -225,7 +230,8 @@ impl RayTracer {
             return;
         }
 
-        self.stat_uniform.set_data(queue, &self.stat.clone().into());
+        self.stat_uniform
+            .set_data(queue, &self.stat.as_shader_type());
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Ray Tracer Compute Encoder"),
@@ -266,7 +272,7 @@ impl RayTracer {
 
 fn create_bind_group(
     device: &wgpu::Device,
-    buffers: &[&dyn resource::Layout],
+    buffers: &[&dyn buffer::Layout],
     visibility: wgpu::ShaderStages,
     label: Option<&str>,
 ) -> (wgpu::BindGroupLayout, wgpu::BindGroup) {

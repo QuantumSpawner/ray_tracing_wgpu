@@ -25,7 +25,7 @@ fn camera_get_ray(camera: Camera, tex_coord: vec2<f32>) -> Ray {
     return ray_new(ray_origin, look_at - ray_origin);
 }
 
-fn sphere_hit(sphere: Sphere, ray: Ray, tmin: f32, tmax: f32, hit: ptr<function, HitRecord>) -> bool {
+fn sphere_hit(sphere: Object, ray: Ray, tmin: f32, tmax: f32, hit: ptr<function, HitRecord>) -> bool {
     let oc = ray.origin - sphere.center;
     let b = dot(oc, ray.direction);
     let c = dot(oc, oc) - sphere.radius * sphere.radius;

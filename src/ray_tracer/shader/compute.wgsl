@@ -8,7 +8,8 @@ override WORKGROUP_SIZE_Y: u32 = 16;
 
 /* buffer---------------------------------------------------------------------*/
 @group(1) @binding(0) var<storage, read_write> frame: array<vec3<f32>>;
-@group(1) @binding(1) var<storage, read_write> scene: Scene;
+@group(1) @binding(1) var<storage, read> objects: Objects;
+@group(1) @binding(2) var<storage, read> materials: Materials;
 
 /* function-------------------------------------------------------------------*/
 @compute
@@ -43,7 +44,7 @@ fn color(_ray: Ray, max_bounce: u32) -> vec3<f32> {
         var hit: HitRecord;
 
         if (spheres_hit(ray, 0.001, 1000.0, &hit)) {
-            let material = scene.spheres[hit.sphere_idx].material;
+            let material = materials.materials[objects.objects[hit.sphere_idx].mat_idx];
 
             albedo *= material.albedo;
             ray = material_scatter(material, ray, hit);
@@ -63,8 +64,8 @@ fn spheres_hit(ray: Ray, tmin: f32, tmax: f32, _hit: ptr<function, HitRecord>) -
     var closest = tmax;
     var hit = false;
 
-    for (var i: u32 = 0; i < scene.num_sphere; i += 1) {
-        if (sphere_hit(scene.spheres[i], ray, tmin, closest, _hit)) {
+    for (var i: u32 = 0; i < objects.num_objects; i += 1) {
+        if (sphere_hit(objects.objects[i], ray, tmin, closest, _hit)) {
             (*_hit).sphere_idx = i;
 
             closest = (*_hit).t;

@@ -85,6 +85,10 @@ impl eframe::App for App {
                         egui::Key::S => self.param.camera.position -= SPEED * forward,
                         egui::Key::D => self.param.camera.position += SPEED * right,
                         egui::Key::Space => self.param.camera.position.y += SPEED,
+                        egui::Key::ArrowUp => self.param.camera.position += SPEED * forward,
+                        egui::Key::ArrowDown => self.param.camera.position -= SPEED * forward,
+                        egui::Key::ArrowLeft => self.param.camera.position -= SPEED * right,
+                        egui::Key::ArrowRight => self.param.camera.position += SPEED * right,
                         _ => {}
                     },
                     egui::Event::MouseWheel { delta, .. } => {
