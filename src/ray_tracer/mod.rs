@@ -1,9 +1,9 @@
 mod buffer;
-mod bvh;
 mod object;
 pub mod param;
 mod scene;
 mod shader_type;
+mod util;
 
 use std::{collections::HashMap, mem::size_of};
 
@@ -39,6 +39,7 @@ pub struct RayTracer {
     _frame_buffer_storage: buffer::StorageBuffer<false>,
     _objects_storage: buffer::StorageBuffer<true>,
     _materials_storage: buffer::StorageBuffer<true>,
+    _bvh_storage: buffer::StorageBuffer<true>,
 
     render_pipeline: wgpu::RenderPipeline,
     render_uniform_bind_group: wgpu::BindGroup,
@@ -59,6 +60,7 @@ impl RayTracer {
         let param = Param::default();
 
         let objects = scene::random_spheres();
+        let bvh = object::build_bvh(&objects);
         let (objects, materials) = object::as_shader_type(&objects);
 
         /* resource-----------------------------------------------------------*/
@@ -78,6 +80,7 @@ impl RayTracer {
             buffer::StorageBuffer::new(device, &objects, Some("Ray Tracer Objects"));
         let material_storage =
             buffer::StorageBuffer::new(device, &materials, Some("Ray Tracer Materials"));
+        let bvh_storage = buffer::StorageBuffer::new(device, &bvh, Some("Ray Tracer BVH"));
 
         /* render shader------------------------------------------------------*/
         let render_shader_source = [
@@ -158,7 +161,12 @@ impl RayTracer {
 
         let (compute_storage_bind_group_layout, compute_storage_bind_group) = create_bind_group(
             device,
-            &[&frame_buffer_storage, &objects_storage, &material_storage],
+            &[
+                &frame_buffer_storage,
+                &objects_storage,
+                &material_storage,
+                &bvh_storage,
+            ],
             wgpu::ShaderStages::COMPUTE,
             Some("Ray Tracer Compute Storage"),
         );
@@ -199,6 +207,7 @@ impl RayTracer {
             _frame_buffer_storage: frame_buffer_storage,
             _objects_storage: objects_storage,
             _materials_storage: material_storage,
+            _bvh_storage: bvh_storage,
 
             render_pipeline,
             render_uniform_bind_group,

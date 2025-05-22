@@ -53,3 +53,15 @@ struct AABB {
     min: vec3f,
     max: vec3f,
 }
+
+struct BVH {
+    num_nodes: u32,
+    nodes: array<BVHNode>,
+}
+
+struct BVHNode {
+    aabb: AABB,
+    left_idx: i32,
+    right_idx: i32,
+    object_idx: i32,
+}

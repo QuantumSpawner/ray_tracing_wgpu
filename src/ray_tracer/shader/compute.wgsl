@@ -10,6 +10,7 @@ override WORKGROUP_SIZE_Y: u32 = 16;
 @group(1) @binding(0) var<storage, read_write> frame: array<vec3<f32>>;
 @group(1) @binding(1) var<storage, read> objects: Objects;
 @group(1) @binding(2) var<storage, read> materials: Materials;
+@group(1) @binding(3) var<storage, read> bvh: BVH;
 
 /* function-------------------------------------------------------------------*/
 @compute

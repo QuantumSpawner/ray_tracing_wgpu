@@ -33,15 +33,6 @@ pub struct Objects {
     pub objects: Vec<Object>,
 }
 
-impl Default for Objects {
-    fn default() -> Self {
-        Self {
-            num_object: encase::ArrayLength,
-            objects: Vec::new(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, encase::ShaderType)]
 pub struct Object {
     pub center: cgmath::Vector3<f32>,
@@ -57,6 +48,37 @@ pub struct Materials {
     pub materials: Vec<Material>,
 }
 
+#[derive(Debug, Clone, encase::ShaderType)]
+pub struct Material {
+    pub mat_type: u32,
+    pub albedo: cgmath::Vector3<f32>,
+
+    // fuzz for reflective, refractive index for transparent
+    pub param1: f32,
+}
+
+#[derive(Debug, Clone, encase::ShaderType)]
+pub struct AABB {
+    pub min: cgmath::Vector3<f32>,
+    pub max: cgmath::Vector3<f32>,
+}
+
+#[derive(Debug, Clone, encase::ShaderType)]
+pub struct BVH {
+    pub num_node: encase::ArrayLength,
+
+    #[size(runtime)]
+    pub nodes: Vec<BVHNode>,
+}
+
+#[derive(Debug, Clone, encase::ShaderType)]
+pub struct BVHNode {
+    pub bbox: AABB,
+    pub left_idx: i32,
+    pub right_idx: i32,
+    pub object_idx: i32,
+}
+
 impl Default for Materials {
     fn default() -> Self {
         Self {
@@ -66,11 +88,20 @@ impl Default for Materials {
     }
 }
 
-#[derive(Debug, Clone, encase::ShaderType)]
-pub struct Material {
-    pub mat_type: u32,
-    pub albedo: cgmath::Vector3<f32>,
+impl Default for Objects {
+    fn default() -> Self {
+        Self {
+            num_object: encase::ArrayLength,
+            objects: Vec::new(),
+        }
+    }
+}
 
-    // fuzz for reflective, refractive index for transparent
-    pub param1: f32,
+impl Default for BVH {
+    fn default() -> Self {
+        Self {
+            num_node: encase::ArrayLength,
+            nodes: Vec::new(),
+        }
+    }
 }
