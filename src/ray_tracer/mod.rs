@@ -1,34 +1,22 @@
 mod buffer;
 mod object;
-pub mod param;
 mod scene;
 mod shader_type;
 mod util;
 
-use std::{collections::HashMap, mem::size_of};
+use std::{
+    collections::HashMap,
+    mem::size_of,
+    time::{Duration, Instant},
+};
 
 use crate::wgpu;
-
-pub use param::{CameraParam, Param};
 
 const WORKGROUP_SIZE_X: u32 = 16;
 const WORKGROUP_SIZE_Y: u32 = 16;
 
 const MAX_WINDOW_SIZE_X: u32 = 1920;
 const MAX_WINDOW_SIZE_Y: u32 = 1080;
-
-#[derive(Debug, Clone, Default, PartialEq)]
-struct Stat {
-    pub frame_counter: u32,
-}
-
-impl Stat {
-    fn as_shader_type(&self) -> shader_type::Stat {
-        shader_type::Stat {
-            frame_counter: self.frame_counter,
-        }
-    }
-}
 
 pub struct RayTracer {
     stat: Stat,
@@ -48,6 +36,32 @@ pub struct RayTracer {
     compute_pipeline: wgpu::ComputePipeline,
     compute_uniform_bind_group: wgpu::BindGroup,
     compute_storage_bind_group: wgpu::BindGroup,
+}
+
+#[derive(Debug, Clone)]
+pub struct Stat {
+    pub is_rendering: bool,
+    pub frame_counter: u32,
+    pub time_spent: Duration,
+    pub time_start: Instant,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Param {
+    pub camera: CameraParam,
+    pub display_size: cgmath::Vector2<u32>,
+    pub max_sample: u32,
+    pub max_bounce: u32,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct CameraParam {
+    pub position: cgmath::Vector3<f32>,
+    pub yaw: f32,
+    pub pitch: f32,
+    pub fov: f32,
+    pub aperture: f32,
+    pub focus_distance: f32,
 }
 
 impl RayTracer {
@@ -234,8 +248,18 @@ impl RayTracer {
         self.reset();
     }
 
+    pub fn get_stat(&self) -> &Stat {
+        &self.stat
+    }
+
     pub fn update(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
+        if !self.stat.is_rendering {
+            return;
+        }
+
         if self.stat.frame_counter >= self.param.max_sample {
+            self.stat.is_rendering = false;
+            self.stat.time_spent = self.stat.time_start.elapsed();
             return;
         }
 
@@ -265,6 +289,7 @@ impl RayTracer {
         queue.submit(Some(encoder.finish()));
 
         self.stat.frame_counter += 1;
+        self.stat.time_spent = self.stat.time_start.elapsed();
     }
 
     pub fn render(&self, render_pass: &mut wgpu::RenderPass<'_>) {
@@ -275,7 +300,90 @@ impl RayTracer {
     }
 
     fn reset(&mut self) {
-        self.stat.frame_counter = 0;
+        self.stat = Stat::default();
+    }
+}
+
+impl Stat {
+    fn as_shader_type(&self) -> shader_type::Stat {
+        shader_type::Stat {
+            frame_counter: self.frame_counter,
+        }
+    }
+}
+
+impl Default for Stat {
+    fn default() -> Self {
+        Self {
+            is_rendering: true,
+            frame_counter: 0,
+            time_spent: Duration::ZERO,
+            time_start: Instant::now(),
+        }
+    }
+}
+
+impl Param {
+    pub fn as_shader_type(&self) -> shader_type::Param {
+        shader_type::Param {
+            camera: self
+                .camera
+                .as_shader_type(self.display_size.x as f32 / self.display_size.y as f32),
+            display_size: self.display_size,
+            max_bounce: self.max_bounce,
+        }
+    }
+}
+
+impl Default for Param {
+    fn default() -> Self {
+        Self {
+            camera: CameraParam::default(),
+            display_size: cgmath::Vector2::new(1, 1),
+            max_sample: 256,
+            max_bounce: 8,
+        }
+    }
+}
+
+impl CameraParam {
+    pub fn as_shader_type(&self, aspect_ratio: f32) -> shader_type::Camera {
+        let rot_matrix = cgmath::Matrix3::from_angle_y(cgmath::Deg(self.yaw))
+            * cgmath::Matrix3::from_angle_x(cgmath::Deg(self.pitch));
+        let w = rot_matrix * cgmath::vec3(0.0, 0.0, 1.0);
+        let u = rot_matrix * cgmath::vec3(1.0, 0.0, 0.0);
+        let v = rot_matrix * cgmath::vec3(0.0, 1.0, 0.0);
+
+        let fov = self.fov.to_radians();
+        let height = self.focus_distance * (fov / 2.0).tan();
+        let width = height * aspect_ratio;
+
+        let start = self.position - width * u + height * v - self.focus_distance * w;
+
+        shader_type::Camera {
+            position: self.position,
+            horizontal: u,
+            vertical: v,
+
+            start,
+            vx: (2.0 * width * u),
+            vy: (-2.0 * height * v),
+
+            lens_radius: self.aperture / 2.0,
+        }
+    }
+}
+
+impl Default for CameraParam {
+    fn default() -> Self {
+        Self {
+            position: cgmath::Vector3::new(13.0, 2.0, 3.0),
+            yaw: 80.0,
+            pitch: -5.0,
+            fov: 20.0,
+            aperture: 0.1,
+            focus_distance: 10.0,
+        }
     }
 }
 

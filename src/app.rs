@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use eframe::{egui_wgpu, wgpu};
 
 use ray_tracing_wgpu::ray_tracer::{self, RayTracer};
@@ -6,7 +7,8 @@ const SPEED: f32 = 0.1;
 const SENSITIVITY: f32 = 0.1;
 
 pub struct App {
-    param: ray_tracer::param::Param,
+    param: ray_tracer::Param,
+    stat: Arc<Mutex<ray_tracer::Stat>>,
     dragging: bool,
     last_mouse_pos: Option<egui::Pos2>,
 }
@@ -22,7 +24,8 @@ impl App {
             .insert(ray_traycer);
 
         Self {
-            param: ray_tracer::param::Param::default(),
+            param: ray_tracer::Param::default(),
+            stat: Arc::new(Mutex::new(ray_tracer::Stat::default())),
             dragging: false,
             last_mouse_pos: None,
         }
@@ -60,6 +63,7 @@ impl App {
             rect,
             RayTracerCallback {
                 param: self.param.clone(),
+                stat: self.stat.clone(),
             },
         ));
     }
@@ -68,6 +72,111 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint();
+
+        egui::Window::new("Control Panel")
+            .anchor(egui::Align2::LEFT_TOP, [10.0, 10.0])
+            .resizable(false)
+            .collapsible(true)
+            .show(ctx, |ui| {
+                let panel_width = 320.0;
+                let label_width = 100.0;
+                ui.set_width(panel_width);
+                ui.add_space(4.0);
+
+                let stat = self.stat.lock().unwrap();
+                let status = if stat.is_rendering {
+                    format!("Rendering ({:.1}s elapsed)", stat.time_spent.as_secs_f32())
+                } else {
+                    format!("Finished ({:.1}s total)", stat.time_spent.as_secs_f32())
+                };
+                ui.label(egui::RichText::new(status).heading().strong());
+                ui.add(
+                    egui::ProgressBar::new(
+                        stat.frame_counter as f32 / self.param.max_sample as f32,
+                    )
+                    .text(format!(
+                        "Frames: {}/{}",
+                        stat.frame_counter, self.param.max_sample
+                    ))
+                    .show_percentage(),
+                );
+
+                ui.label(egui::RichText::new("Sample").heading().strong());
+                egui::Frame::group(ui.style())
+                    .fill(ui.visuals().extreme_bg_color)
+                    .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.active.bg_fill))
+                    .show(ui, |ui| {
+                        ui.set_width(panel_width - 16.0);
+
+                        ui.horizontal(|ui| {
+                            ui.add_sized([label_width, 0.0], egui::Label::new("Samples per Pixel"));
+                            ui.add(egui::Slider::new(&mut self.param.max_sample, 1..=4096));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add_sized([label_width, 0.0], egui::Label::new("Max Bounces"));
+                            ui.add(egui::Slider::new(&mut self.param.max_bounce, 1..=32));
+                        });
+                    });
+
+                ui.label(egui::RichText::new("Camera").heading().strong());
+                egui::Frame::group(ui.style())
+                    .fill(ui.visuals().extreme_bg_color)
+                    .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.active.bg_fill))
+                    .show(ui, |ui| {
+                        ui.set_width(panel_width - 16.0);
+
+                        ui.horizontal(|ui| {
+                            ui.add_sized([label_width, 0.0], egui::Label::new("FOV"));
+                            ui.add(egui::Slider::new(&mut self.param.camera.fov, 10.0..=120.0));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add_sized([label_width, 0.0], egui::Label::new("Aperture"));
+                            ui.add(egui::Slider::new(
+                                &mut self.param.camera.aperture,
+                                0.0..=1.0,
+                            ));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add_sized([label_width, 0.0], egui::Label::new("Focus Distance"));
+                            ui.add(egui::Slider::new(
+                                &mut self.param.camera.focus_distance,
+                                0.0..=100.0,
+                            ));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add_sized([label_width, 0.0], egui::Label::new("Pitch"));
+                            ui.add(egui::Slider::new(
+                                &mut self.param.camera.pitch,
+                                -89.9..=89.9,
+                            ));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add_sized([label_width, 0.0], egui::Label::new("Yaw"));
+                            ui.add(egui::Slider::new(
+                                &mut self.param.camera.yaw,
+                                -180.0..=180.0,
+                            ));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Position");
+                            ui.add(
+                                egui::DragValue::new(&mut self.param.camera.position.x)
+                                    .speed(0.1)
+                                    .prefix("x: "),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut self.param.camera.position.y)
+                                    .speed(0.1)
+                                    .prefix("y: "),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut self.param.camera.position.z)
+                                    .speed(0.1)
+                                    .prefix("z: "),
+                            );
+                        });
+                    });
+            });
 
         ctx.input(|input| {
             let yaw = self.param.camera.yaw;
@@ -113,7 +222,8 @@ impl eframe::App for App {
 }
 
 struct RayTracerCallback {
-    param: ray_tracer::param::Param,
+    param: ray_tracer::Param,
+    stat: Arc<Mutex<ray_tracer::Stat>>,
 }
 
 impl egui_wgpu::CallbackTrait for RayTracerCallback {
@@ -129,6 +239,9 @@ impl egui_wgpu::CallbackTrait for RayTracerCallback {
 
         ray_tracer.set_params(queue, &self.param);
         ray_tracer.update(device, queue);
+
+        let mut stat = self.stat.lock().unwrap();
+        *stat = ray_tracer.get_stat().clone();
 
         Vec::new()
     }
