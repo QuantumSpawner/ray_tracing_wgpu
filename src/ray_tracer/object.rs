@@ -119,9 +119,9 @@ impl Sphere {
 impl Object for Sphere {
     fn as_shader_type(&self, mat_idx: u32) -> shader_type::Object {
         shader_type::Object {
+            mat_idx,
             center: self.center,
             radius: self.radius,
-            mat_idx,
         }
     }
 

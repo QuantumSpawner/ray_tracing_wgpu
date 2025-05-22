@@ -1,3 +1,6 @@
+const HIT_BRUTE: u32 = 0;
+const HIT_BVH: u32 = 1;
+
 const MAT_DIFFUSE: u32 = 0;
 const MAT_REFLECTIVE: u32 = 1;
 const MAT_TRANSPARENT: u32 = 2;
@@ -7,12 +10,13 @@ struct Stat {
 }
 
 struct Param {
-    camera: Camera,
+    camera: CameraParam,
+    hit_algorithm: u32,
     window_size: vec2<u32>,
     max_bounce: u32,
 }
 
-struct Camera {
+struct CameraParam {
     position: vec3<f32>,
     // unit vectors of the lens plane
     horizontal: vec3<f32>,
@@ -26,19 +30,36 @@ struct Camera {
     lens_radius: f32,
 }
 
+struct AABB {
+    min: vec3f,
+    max: vec3f,
+}
+
+struct BVH {
+    num_node: u32,
+    nodes: array<BVHNode>,
+}
+
+struct BVHNode {
+    bbox: AABB,
+    left_idx: i32,
+    right_idx: i32,
+    object_idx: i32,
+}
+
 struct Objects {
-    num_objects: u32,
+    num_object: u32,
     objects: array<Object>,
 }
 
 struct Object {
+    mat_idx: u32,
     center: vec3<f32>,
     radius: f32,
-    mat_idx: u32,
 }
 
 struct Materials {
-    num_materials: u32,
+    num_material: u32,
     materials: array<Material>,
 }
 
@@ -47,21 +68,4 @@ struct Material {
     albedo: vec3<f32>,
     // fuzz for reflective, refractive index for transparent
     param1: f32,
-}
-
-struct AABB {
-    min: vec3f,
-    max: vec3f,
-}
-
-struct BVH {
-    num_nodes: u32,
-    nodes: array<BVHNode>,
-}
-
-struct BVHNode {
-    aabb: AABB,
-    left_idx: i32,
-    right_idx: i32,
-    object_idx: i32,
 }

@@ -1,5 +1,5 @@
-use std::sync::{Arc, Mutex};
 use eframe::{egui_wgpu, wgpu};
+use std::sync::{Arc, Mutex};
 
 use ray_tracing_wgpu::ray_tracer::{self, RayTracer};
 
@@ -51,7 +51,7 @@ impl App {
                 if let Some(last_pos) = self.last_mouse_pos {
                     let delta = current_pos - last_pos;
                     self.param.camera.yaw -= delta.x * SENSITIVITY;
-                    self.param.camera.pitch += delta.y * SENSITIVITY;
+                    self.param.camera.pitch -= delta.y * SENSITIVITY;
 
                     self.param.camera.pitch = self.param.camera.pitch.clamp(-89.9, 89.9);
                 }
@@ -95,10 +95,9 @@ impl eframe::App for App {
                         stat.frame_counter as f32 / self.param.max_sample as f32,
                     )
                     .text(format!(
-                        "Frames: {}/{}",
+                        "Frame: {}/{}",
                         stat.frame_counter, self.param.max_sample
-                    ))
-                    .show_percentage(),
+                    )),
                 );
 
                 ui.label(egui::RichText::new("Sample").heading().strong());
@@ -176,6 +175,26 @@ impl eframe::App for App {
                             );
                         });
                     });
+
+                ui.label(egui::RichText::new("Hit Algorithm").heading().strong());
+                egui::Frame::group(ui.style())
+                    .fill(ui.visuals().extreme_bg_color)
+                    .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.active.bg_fill))
+                    .show(ui, |ui| {
+                        ui.set_width(panel_width - 16.0);
+                        ui.horizontal(|ui| {
+                            ui.radio_value(
+                                &mut self.param.hit_algorithm,
+                                ray_tracer::HitAlgorithm::Brute,
+                                "Brute Force",
+                            );
+                            ui.radio_value(
+                                &mut self.param.hit_algorithm,
+                                ray_tracer::HitAlgorithm::BVH,
+                                "BVH",
+                            );
+                        });
+                    });
             });
 
         ctx.input(|input| {
@@ -201,7 +220,7 @@ impl eframe::App for App {
                         _ => {}
                     },
                     egui::Event::MouseWheel { delta, .. } => {
-                        self.param.camera.fov += delta.y * 10.0 * SENSITIVITY;
+                        self.param.camera.fov -= delta.y * 10.0 * SENSITIVITY;
                         self.param.camera.fov = self.param.camera.fov.clamp(10.0, 120.0);
                     }
                     _ => {}

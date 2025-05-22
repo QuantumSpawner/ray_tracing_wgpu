@@ -25,9 +25,9 @@ pub struct RayTracer {
     stat_uniform: buffer::UniformBuffer<shader_type::Stat>,
     param_uniform: buffer::UniformBuffer<shader_type::Param>,
     _frame_buffer_storage: buffer::StorageBuffer<false>,
+    _bvh_storage: buffer::StorageBuffer<true>,
     _objects_storage: buffer::StorageBuffer<true>,
     _materials_storage: buffer::StorageBuffer<true>,
-    _bvh_storage: buffer::StorageBuffer<true>,
 
     render_pipeline: wgpu::RenderPipeline,
     render_uniform_bind_group: wgpu::BindGroup,
@@ -49,9 +49,16 @@ pub struct Stat {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {
     pub camera: CameraParam,
+    pub hit_algorithm: HitAlgorithm,
     pub display_size: cgmath::Vector2<u32>,
     pub max_sample: u32,
     pub max_bounce: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum HitAlgorithm {
+    Brute,
+    BVH,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -90,11 +97,11 @@ impl RayTracer {
             MAX_WINDOW_SIZE_X as usize * MAX_WINDOW_SIZE_Y as usize * 4 * size_of::<f32>(),
             Some("Ray Tracer Frame Buffer"),
         );
+        let bvh_storage = buffer::StorageBuffer::new(device, &bvh, Some("Ray Tracer BVH"));
         let objects_storage =
             buffer::StorageBuffer::new(device, &objects, Some("Ray Tracer Objects"));
         let material_storage =
             buffer::StorageBuffer::new(device, &materials, Some("Ray Tracer Materials"));
-        let bvh_storage = buffer::StorageBuffer::new(device, &bvh, Some("Ray Tracer BVH"));
 
         /* render shader------------------------------------------------------*/
         let render_shader_source = [
@@ -177,9 +184,9 @@ impl RayTracer {
             device,
             &[
                 &frame_buffer_storage,
+                &bvh_storage,
                 &objects_storage,
                 &material_storage,
-                &bvh_storage,
             ],
             wgpu::ShaderStages::COMPUTE,
             Some("Ray Tracer Compute Storage"),
@@ -219,9 +226,9 @@ impl RayTracer {
             stat_uniform,
             param_uniform,
             _frame_buffer_storage: frame_buffer_storage,
+            _bvh_storage: bvh_storage,
             _objects_storage: objects_storage,
             _materials_storage: material_storage,
-            _bvh_storage: bvh_storage,
 
             render_pipeline,
             render_uniform_bind_group,
@@ -329,6 +336,10 @@ impl Param {
             camera: self
                 .camera
                 .as_shader_type(self.display_size.x as f32 / self.display_size.y as f32),
+            hit_algorithm: match self.hit_algorithm {
+                HitAlgorithm::Brute => shader_type::HIT_BRUTE,
+                HitAlgorithm::BVH => shader_type::HIT_BVH,
+            },
             display_size: self.display_size,
             max_bounce: self.max_bounce,
         }
@@ -339,6 +350,7 @@ impl Default for Param {
     fn default() -> Self {
         Self {
             camera: CameraParam::default(),
+            hit_algorithm: HitAlgorithm::BVH,
             display_size: cgmath::Vector2::new(1, 1),
             max_sample: 256,
             max_bounce: 8,

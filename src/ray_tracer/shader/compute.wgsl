@@ -1,4 +1,6 @@
 /* constant-------------------------------------------------------------------*/
+const BVH_MAX_STACK: u32 = 32;
+
 override WORKGROUP_SIZE_X: u32 = 16;
 override WORKGROUP_SIZE_Y: u32 = 16;
 
@@ -8,9 +10,9 @@ override WORKGROUP_SIZE_Y: u32 = 16;
 
 /* buffer---------------------------------------------------------------------*/
 @group(1) @binding(0) var<storage, read_write> frame: array<vec3<f32>>;
-@group(1) @binding(1) var<storage, read> objects: Objects;
-@group(1) @binding(2) var<storage, read> materials: Materials;
-@group(1) @binding(3) var<storage, read> bvh: BVH;
+@group(1) @binding(1) var<storage, read> bvh: BVH;
+@group(1) @binding(2) var<storage, read> objects: Objects;
+@group(1) @binding(3) var<storage, read> materials: Materials;
 
 /* function-------------------------------------------------------------------*/
 @compute
@@ -44,8 +46,9 @@ fn color(_ray: Ray, max_bounce: u32) -> vec3<f32> {
     for (var i: u32 = 0; i < max_bounce; i += 1) {
         var hit: HitRecord;
 
-        if (spheres_hit(ray, 0.001, 1000.0, &hit)) {
-            let material = materials.materials[objects.objects[hit.sphere_idx].mat_idx];
+        if (hit(ray, Interval(0.001, 1000.0), &hit)) {
+            let object = objects.objects[hit.object_idx];
+            let material = materials.materials[object.mat_idx];
 
             albedo *= material.albedo;
             ray = material_scatter(material, ray, hit);
@@ -61,16 +64,73 @@ fn color(_ray: Ray, max_bounce: u32) -> vec3<f32> {
     return albedo * color;
 }
 
-fn spheres_hit(ray: Ray, tmin: f32, tmax: f32, _hit: ptr<function, HitRecord>) -> bool {
-    var closest = tmax;
+fn hit(ray: Ray, interval: Interval, hit: ptr<function, HitRecord>) -> bool {
+    switch param.hit_algorithm {
+        case HIT_BRUTE: {
+            return brute_hit(ray, interval, hit);
+        }
+
+        case HIT_BVH: {
+            return bvh_hit(ray, interval, hit);
+        }
+
+        default: {
+            return false;
+        }
+    }
+}
+
+fn brute_hit(ray: Ray, _interval: Interval, _hit: ptr<function, HitRecord>) -> bool {
+    var interval = _interval;
     var hit = false;
 
-    for (var i: u32 = 0; i < objects.num_objects; i += 1) {
-        if (sphere_hit(objects.objects[i], ray, tmin, closest, _hit)) {
-            (*_hit).sphere_idx = i;
+    for (var i = 0; i < i32(objects.num_object); i++) {
+        if (object_hit(objects.objects[i], ray, interval, _hit)) {
+            (*_hit).object_idx = i;
 
-            closest = (*_hit).t;
+            interval.max = (*_hit).t;
             hit = true;
+        }
+    }
+
+    return hit;
+}
+
+fn bvh_hit(ray: Ray, _interval: Interval, _hit: ptr<function, HitRecord>) -> bool {
+    var interval = _interval;
+    var hit = false;
+
+    var stack: array<i32, BVH_MAX_STACK>;
+    stack[0] = 0;
+    var stack_top = 0;
+
+    while (stack_top >= 0) {
+        let node = bvh.nodes[stack[stack_top]];
+        stack_top--;
+
+        if (!bbox_hit(node.bbox, ray, interval)) {
+            continue;
+        }
+
+        if (node.object_idx >= 0) {
+            if (object_hit(objects.objects[node.object_idx], ray, interval, _hit)) {
+                (*_hit).object_idx = node.object_idx;
+
+                interval.max = (*_hit).t;
+                hit = true;
+            }
+
+            // !object_idx < 0 only for leaf nodes
+            continue;
+        }
+
+        if (node.left_idx >= 0) {
+            stack_top++;
+            stack[stack_top] = node.left_idx;
+        }
+        if (node.right_idx >= 0) {
+            stack_top++;
+            stack[stack_top] = node.right_idx;
         }
     }
 
