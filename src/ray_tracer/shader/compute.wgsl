@@ -1,5 +1,5 @@
 /* constant-------------------------------------------------------------------*/
-const BVH_MAX_STACK: u32 = 32;
+const BVH_MAX_STACK: u32 = 16;
 
 override WORKGROUP_SIZE_X: u32 = 16;
 override WORKGROUP_SIZE_Y: u32 = 16;

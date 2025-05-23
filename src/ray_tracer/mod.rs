@@ -49,8 +49,9 @@ pub struct Stat {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Param {
     pub camera: CameraParam,
-    pub hit_algorithm: HitAlgorithm,
     pub display_size: cgmath::Vector2<u32>,
+    pub hit_algorithm: HitAlgorithm,
+    pub shading_algorithm: ShadingAlgorithm,
     pub max_sample: u32,
     pub max_bounce: u32,
 }
@@ -59,6 +60,12 @@ pub struct Param {
 pub enum HitAlgorithm {
     Brute,
     BVH,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ShadingAlgorithm {
+    Flat,
+    Smooth,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -81,8 +88,7 @@ impl RayTracer {
         let param = Param::default();
 
         let objects = scene::random_spheres();
-        let bvh = object::build_bvh(&objects);
-        let (objects, materials) = object::as_shader_type(&objects);
+        let (bvh, objects, materials) = object::as_shader_types(&objects);
 
         /* resource-----------------------------------------------------------*/
         let stat_uniform =
@@ -336,11 +342,15 @@ impl Param {
             camera: self
                 .camera
                 .as_shader_type(self.display_size.x as f32 / self.display_size.y as f32),
+            display_size: self.display_size,
             hit_algorithm: match self.hit_algorithm {
                 HitAlgorithm::Brute => shader_type::HIT_BRUTE,
                 HitAlgorithm::BVH => shader_type::HIT_BVH,
             },
-            display_size: self.display_size,
+            shading_algorithm: match self.shading_algorithm {
+                ShadingAlgorithm::Flat => shader_type::SHADE_FLAT,
+                ShadingAlgorithm::Smooth => shader_type::SHADE_SMOOTH,
+            },
             max_bounce: self.max_bounce,
         }
     }
@@ -350,8 +360,9 @@ impl Default for Param {
     fn default() -> Self {
         Self {
             camera: CameraParam::default(),
-            hit_algorithm: HitAlgorithm::BVH,
             display_size: cgmath::Vector2::new(1, 1),
+            hit_algorithm: HitAlgorithm::BVH,
+            shading_algorithm: ShadingAlgorithm::Smooth,
             max_sample: 256,
             max_bounce: 8,
         }

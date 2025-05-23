@@ -1,6 +1,12 @@
 const HIT_BRUTE: u32 = 0;
 const HIT_BVH: u32 = 1;
 
+const SHADE_FLAT: u32 = 0;
+const SHADE_SMOOTH: u32 = 1;
+
+const OBJ_TRIANGLE: u32 = 0;
+const OBJ_SPHERE: u32 = 1;
+
 const MAT_DIFFUSE: u32 = 0;
 const MAT_REFLECTIVE: u32 = 1;
 const MAT_TRANSPARENT: u32 = 2;
@@ -11,8 +17,9 @@ struct Stat {
 
 struct Param {
     camera: CameraParam,
-    hit_algorithm: u32,
     window_size: vec2<u32>,
+    hit_algorithm: u32,
+    shading_algorithm: u32,
     max_bounce: u32,
 }
 
@@ -53,9 +60,10 @@ struct Objects {
 }
 
 struct Object {
+    obj_type: u32,
     mat_idx: u32,
-    center: vec3<f32>,
-    radius: f32,
+    v: array<vec3<f32>, 3>,
+    n: array<vec3<f32>, 3>,
 }
 
 struct Materials {

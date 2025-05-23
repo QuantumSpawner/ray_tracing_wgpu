@@ -71,7 +71,11 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        ctx.request_repaint();
+        let stat = self.stat.lock().unwrap();
+
+        if stat.is_rendering {
+            ctx.request_repaint();
+        }
 
         egui::Window::new("Control Panel")
             .anchor(egui::Align2::LEFT_TOP, [10.0, 10.0])
@@ -83,7 +87,6 @@ impl eframe::App for App {
                 ui.set_width(panel_width);
                 ui.add_space(4.0);
 
-                let stat = self.stat.lock().unwrap();
                 let status = if stat.is_rendering {
                     format!("Rendering ({:.1}s elapsed)", stat.time_spent.as_secs_f32())
                 } else {
@@ -100,7 +103,7 @@ impl eframe::App for App {
                     )),
                 );
 
-                ui.label(egui::RichText::new("Sample").heading().strong());
+                ui.label(egui::RichText::new("Sampling").heading().strong());
                 egui::Frame::group(ui.style())
                     .fill(ui.visuals().extreme_bg_color)
                     .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.active.bg_fill))
@@ -176,13 +179,15 @@ impl eframe::App for App {
                         });
                     });
 
-                ui.label(egui::RichText::new("Hit Algorithm").heading().strong());
+                ui.label(egui::RichText::new("Algorithm").heading().strong());
                 egui::Frame::group(ui.style())
                     .fill(ui.visuals().extreme_bg_color)
                     .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.active.bg_fill))
                     .show(ui, |ui| {
                         ui.set_width(panel_width - 16.0);
+
                         ui.horizontal(|ui| {
+                            ui.add_sized([label_width, 0.0], egui::Label::new("Hit"));
                             ui.radio_value(
                                 &mut self.param.hit_algorithm,
                                 ray_tracer::HitAlgorithm::Brute,
@@ -192,6 +197,19 @@ impl eframe::App for App {
                                 &mut self.param.hit_algorithm,
                                 ray_tracer::HitAlgorithm::BVH,
                                 "BVH",
+                            );
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add_sized([label_width, 0.0], egui::Label::new("Shading"));
+                            ui.radio_value(
+                                &mut self.param.shading_algorithm,
+                                ray_tracer::ShadingAlgorithm::Flat,
+                                "Flat",
+                            );
+                            ui.radio_value(
+                                &mut self.param.shading_algorithm,
+                                ray_tracer::ShadingAlgorithm::Smooth,
+                                "Smooth",
                             );
                         });
                     });
@@ -231,6 +249,8 @@ impl eframe::App for App {
                 self.param.camera.position.y -= SPEED;
             }
         });
+
+        drop(stat);
 
         egui::CentralPanel::default().show(ctx, |ui| {
             egui::Frame::canvas(ui.style()).show(ui, |ui| {

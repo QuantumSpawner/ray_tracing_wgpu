@@ -1,6 +1,12 @@
 pub const HIT_BRUTE: u32 = 0;
 pub const HIT_BVH: u32 = 1;
 
+pub const SHADE_FLAT: u32 = 0;
+pub const SHADE_SMOOTH: u32 = 1;
+
+pub const OBJ_TRIANGLE: u32 = 0;
+pub const OBJ_SPHERE: u32 = 1;
+
 pub const MAT_DIFFUSE: u32 = 0;
 pub const MAT_REFLECTIVE: u32 = 1;
 pub const MAT_TRANSPARENT: u32 = 2;
@@ -13,8 +19,9 @@ pub struct Stat {
 #[derive(Debug, Clone, encase::ShaderType)]
 pub struct Param {
     pub camera: Camera,
-    pub hit_algorithm: u32,
     pub display_size: cgmath::Vector2<u32>,
+    pub hit_algorithm: u32,
+    pub shading_algorithm: u32,
     pub max_bounce: u32,
 }
 
@@ -61,9 +68,11 @@ pub struct Objects {
 
 #[derive(Debug, Clone, encase::ShaderType)]
 pub struct Object {
+    pub obj_type: u32,
     pub mat_idx: u32,
-    pub center: cgmath::Vector3<f32>,
-    pub radius: f32,
+    // v[0] for the center and v[1].x for the radius of sphere
+    pub v: [cgmath::Vector3<f32>; 3],
+    pub n: [cgmath::Vector3<f32>; 3],
 }
 
 #[derive(Debug, Clone, encase::ShaderType)]
