@@ -132,18 +132,30 @@ impl Default for BVHNode {
     }
 }
 
-impl Mesh {
-    pub fn load_obj(model: &str, material: Material) -> Self {
-        let (models, _) = tobj::load_obj(
-            model,
-            &tobj::LoadOptions {
-                triangulate: true,
-                ..Default::default()
-            },
-        )
-        .unwrap();
+use std::io::Cursor;
 
-        let mesh = &models[0].mesh;
+#[allow(unused)]
+impl Mesh {
+    pub fn load_obj_from_str(obj_str: &str, material: Material) -> Self {
+        let mut cursor = Cursor::new(obj_str.as_bytes());
+        let (models, _) =
+            tobj::load_obj_buf(&mut cursor, &tobj::LoadOptions::default(), |p| {
+                match p.to_str().unwrap() {
+                    _ => panic!("Expect no material file"),
+                }
+            })
+            .unwrap();
+
+        Self::from_mesh(&models[0].mesh, material)
+    }
+
+    pub fn load_obj(model: &str, material: Material) -> Self {
+        let (models, _) = tobj::load_obj(model, &tobj::LoadOptions::default()).unwrap();
+
+        Self::from_mesh(&models[0].mesh, material)
+    }
+
+    pub fn from_mesh(mesh: &tobj::Mesh, material: Material) -> Self {
         let vertices = mesh
             .positions
             .chunks(3)

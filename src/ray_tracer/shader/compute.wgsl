@@ -46,7 +46,7 @@ fn color(_ray: Ray, max_bounce: u32) -> vec3<f32> {
     for (var i: u32 = 0; i < max_bounce; i += 1) {
         var hit: HitRecord;
 
-        if (hit(ray, Interval(0.001, 1000.0), &hit)) {
+        if (calculate_hit(ray, Interval(0.001, 1000.0), &hit)) {
             let object = objects.objects[hit.object_idx];
             let material = materials.materials[object.mat_idx];
 
@@ -64,7 +64,7 @@ fn color(_ray: Ray, max_bounce: u32) -> vec3<f32> {
     return albedo * color;
 }
 
-fn hit(ray: Ray, interval: Interval, hit: ptr<function, HitRecord>) -> bool {
+fn calculate_hit(ray: Ray, interval: Interval, hit: ptr<function, HitRecord>) -> bool {
     switch param.hit_algorithm {
         case HIT_BRUTE: {
             return brute_hit(ray, interval, hit);

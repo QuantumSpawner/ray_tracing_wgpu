@@ -106,6 +106,11 @@ impl eframe::App for App {
                                 stat.frame_counter, self.param.max_sample
                             )),
                         );
+
+                        ui.label(format!(
+                            "Screen Size: {}x{}",
+                            self.param.display_size.x, self.param.display_size.y
+                        ));
                     });
 
                 ui.label(egui::RichText::new("Sampling").heading().strong());

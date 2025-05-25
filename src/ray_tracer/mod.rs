@@ -4,13 +4,9 @@ mod scene;
 mod shader_type;
 mod util;
 
-use std::{
-    collections::HashMap,
-    mem::size_of,
-    time::{Duration, Instant},
-};
+use std::{collections::HashMap, mem::size_of, time::Duration};
 
-use crate::wgpu;
+use crate::{timer::Instant, wgpu};
 
 const WORKGROUP_SIZE_X: u32 = 16;
 const WORKGROUP_SIZE_Y: u32 = 16;
@@ -39,7 +35,7 @@ pub struct Stat {
     pub is_rendering: bool,
     pub frame_counter: u32,
     pub time_spent: Duration,
-    pub time_start: Instant,
+    time_start: Instant,
 }
 
 #[derive(Debug, Clone, PartialEq)]

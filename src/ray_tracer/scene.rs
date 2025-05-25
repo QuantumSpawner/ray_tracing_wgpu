@@ -1,5 +1,4 @@
 use cgmath::{InnerSpace, vec3};
-use std::path::PathBuf;
 
 use super::{
     object::{Material, Mesh, Object, Sphere},
@@ -26,11 +25,9 @@ pub fn random_spheres() -> Vec<Box<dyn Object>> {
     //     },
     // )));
 
-    let teapot_path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/teapot.obj");
     objects.push(Box::new(
-        Mesh::load_obj(
-            teapot_path.to_str().unwrap(),
+        Mesh::load_obj_from_str(
+            include_str!("../../assets/teapot.obj"),
             Material::Reflective {
                 albedo: cgmath::vec3(0.7, 0.6, 0.5),
                 fuzz: 0.0,

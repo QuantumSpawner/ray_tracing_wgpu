@@ -66,7 +66,6 @@ impl<T> Layout for UniformBuffer<T> {
 
 pub struct StorageBuffer<const RO: bool> {
     pub buffer: wgpu::Buffer,
-    writer: encase::StorageBuffer<Vec<u8>>,
 }
 
 impl<const RO: bool> StorageBuffer<RO> {
@@ -96,17 +95,7 @@ impl<const RO: bool> StorageBuffer<RO> {
 
         Self {
             buffer,
-            writer: encase::StorageBuffer::new(Vec::<u8>::new()),
         }
-    }
-
-    pub fn set_data<T: encase::ShaderType + encase::internal::WriteInto>(
-        &mut self,
-        queue: &wgpu::Queue,
-        data: &T,
-    ) {
-        self.writer.write(data).unwrap();
-        queue.write_buffer(&self.buffer, 0, self.writer.as_ref());
     }
 }
 
@@ -132,12 +121,14 @@ impl<const RO: bool> Layout for StorageBuffer<RO> {
     }
 }
 
+#[allow(unused)]
 pub struct Texture {
     size: wgpu::Extent3d,
     texture: wgpu::Texture,
     view: wgpu::TextureView,
 }
 
+#[allow(unused)]
 impl Texture {
     pub fn new(
         device: &wgpu::Device,
