@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+</head>
+<body>
+    <title>Ray Tracing WGPU</title>
+    <canvas id="the_canvas_id"></canvas>
+    <script type="module">
+    import init from './ray_tracing_wgpu.js';
+    async function run() {
+        await init();
+    }
+    run();
+    </script>
+</body>
+</html>
+
+<style>
+html {
+    background-color: #1b1b1b;
+}
+canvas {
+    margin-right: auto;
+    margin-left: auto;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+</style>
