@@ -19,7 +19,7 @@ jobs:
       
       - name: Build
         run: |
-          cargo build --target wasm32-unknown-unknown --release
+          RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknown-unknown --release
           wasm-bindgen target/wasm32-unknown-unknown/release/ray_tracing_wgpu.wasm --out-dir web --web
 
       - name: Publish to GitHub Pages
