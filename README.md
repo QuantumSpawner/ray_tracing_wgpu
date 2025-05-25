@@ -6,13 +6,50 @@ A simple ray tracing implementation in Rust using WGPU, inspired by the [Ray Tra
 
 ## Running the Project
 
-1. Install rust compiler `rustc` and builder/package manager `cargo` from [Install Rust](https://www.rust-lang.org/tools/install).
+### Prerequisites
+
+Install rust compiler `rustc` and builder/package manager `cargo` from [Install Rust](https://www.rust-lang.org/tools/install).
+
+### Build for Desktop
+
+1. (For Linux systems) Install dependencies by:
+    ```bash
+    sudo apt-get install -y \
+        libclang-dev \
+        libgtk-3-dev \
+        libxcb-render0-dev \
+        libxcb-shape0-dev \
+        libxcb-xfixes0-dev \
+        libxkbcommon-dev libssl-dev
+    ```
+
 2. Build and run the project by:
     ```bash
     cargo run --release
     ```
 
-### Camera and Render Controls
+### Build for Web
+
+1. Add the `wasm32-unknown-unknown` target and install `web-bindgen` tool by:
+    ```bash
+    rustup target add wasm32-unknown-unknown
+    cargo install wasm-bindgen-cli
+    ```
+
+2. Build and generate bindings for the web by:
+    ```bash
+    RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknown-unknown --release
+    wasm-bindgen target/wasm32-unknown-unknown/release/ray_tracing_wgpu.wasm --out-dir web --web
+    ```
+
+3. Serve the `web` directory using a web server. The provided method is to use `nginx` in a `docker` container:
+    ```bash
+    cd web
+    docker compose up -d
+    ```
+    The application will be available at `http://localhost:8080`.
+
+## Controls
 
 - Move the camera using WASD keys.
 - Pan the camera by dragging the mouse.
@@ -55,3 +92,7 @@ TDB
 - GitHub: [Nelarius/weekend-raytracer-wgpu](https://github.com/Nelarius/weekend-raytracer-wgpu)
 - GitHub: [gnikoloff/webgpu-raytracer](https://github.com/gnikoloff/webgpu-raytracer)
 - Tutorial: [Ray-Tracing: Rendering a Triangle](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html)
+
+### WebAssembly
+
+- [egui 的基本使用 & egui 编译成 wasm](https://zhuanlan.zhihu.com/p/31819069353)
