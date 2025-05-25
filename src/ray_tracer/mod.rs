@@ -24,10 +24,6 @@ pub struct RayTracer {
 
     stat_uniform: buffer::UniformBuffer<shader_type::Stat>,
     param_uniform: buffer::UniformBuffer<shader_type::Param>,
-    _frame_buffer_storage: buffer::StorageBuffer<false>,
-    _bvh_storage: buffer::StorageBuffer<true>,
-    _objects_storage: buffer::StorageBuffer<true>,
-    _materials_storage: buffer::StorageBuffer<true>,
 
     render_pipeline: wgpu::RenderPipeline,
     render_uniform_bind_group: wgpu::BindGroup,
@@ -98,16 +94,16 @@ impl RayTracer {
             &param.clone().as_shader_type(),
             Some("Ray Tracer Parameter"),
         );
-        let frame_buffer_storage = buffer::StorageBuffer::new_with_size(
+        let frame_buffer_storage = buffer::StorageBuffer::<false>::new_with_size(
             device,
             MAX_WINDOW_SIZE_X as usize * MAX_WINDOW_SIZE_Y as usize * 4 * size_of::<f32>(),
             Some("Ray Tracer Frame Buffer"),
         );
-        let bvh_storage = buffer::StorageBuffer::new(device, &bvh, Some("Ray Tracer BVH"));
+        let bvh_storage = buffer::StorageBuffer::<true>::new(device, &bvh, Some("Ray Tracer BVH"));
         let objects_storage =
-            buffer::StorageBuffer::new(device, &objects, Some("Ray Tracer Objects"));
+            buffer::StorageBuffer::<true>::new(device, &objects, Some("Ray Tracer Objects"));
         let material_storage =
-            buffer::StorageBuffer::new(device, &materials, Some("Ray Tracer Materials"));
+            buffer::StorageBuffer::<true>::new(device, &materials, Some("Ray Tracer Materials"));
 
         /* render shader------------------------------------------------------*/
         let render_shader_source = [
@@ -231,10 +227,6 @@ impl RayTracer {
 
             stat_uniform,
             param_uniform,
-            _frame_buffer_storage: frame_buffer_storage,
-            _bvh_storage: bvh_storage,
-            _objects_storage: objects_storage,
-            _materials_storage: material_storage,
 
             render_pipeline,
             render_uniform_bind_group,

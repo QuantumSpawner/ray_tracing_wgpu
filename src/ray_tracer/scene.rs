@@ -27,7 +27,7 @@ pub fn random_spheres() -> Vec<Box<dyn Object>> {
     // )));
 
     let teapot_path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/ray_tracer/obj/teapot.obj");
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/teapot.obj");
     objects.push(Box::new(
         Mesh::load_obj(
             teapot_path.to_str().unwrap(),

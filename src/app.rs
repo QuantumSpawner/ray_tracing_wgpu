@@ -93,15 +93,20 @@ impl eframe::App for App {
                     format!("Finished ({:.1}s total)", stat.time_spent.as_secs_f32())
                 };
                 ui.label(egui::RichText::new(status).heading().strong());
-                ui.add(
-                    egui::ProgressBar::new(
-                        stat.frame_counter as f32 / self.param.max_sample as f32,
-                    )
-                    .text(format!(
-                        "Frame: {}/{}",
-                        stat.frame_counter, self.param.max_sample
-                    )),
-                );
+                egui::Frame::group(ui.style())
+                    .fill(ui.visuals().extreme_bg_color)
+                    .stroke(egui::Stroke::new(1.0, ui.visuals().widgets.active.bg_fill))
+                    .show(ui, |ui| {
+                        ui.add(
+                            egui::ProgressBar::new(
+                                stat.frame_counter as f32 / self.param.max_sample as f32,
+                            )
+                            .text(format!(
+                                "Frame: {}/{}",
+                                stat.frame_counter, self.param.max_sample
+                            )),
+                        );
+                    });
 
                 ui.label(egui::RichText::new("Sampling").heading().strong());
                 egui::Frame::group(ui.style())

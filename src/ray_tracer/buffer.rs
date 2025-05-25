@@ -11,7 +11,7 @@ pub trait Layout {
 }
 
 pub struct UniformBuffer<T> {
-    buffer: wgpu::Buffer,
+    pub buffer: wgpu::Buffer,
     writer: encase::UniformBuffer<Vec<u8>>,
     __marker: PhantomData<T>,
 }
@@ -65,7 +65,7 @@ impl<T> Layout for UniformBuffer<T> {
 }
 
 pub struct StorageBuffer<const RO: bool> {
-    buffer: wgpu::Buffer,
+    pub buffer: wgpu::Buffer,
     writer: encase::StorageBuffer<Vec<u8>>,
 }
 
