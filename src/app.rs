@@ -6,6 +6,11 @@ use ray_tracing_wgpu::ray_tracer::{self, RayTracer};
 const SPEED: f32 = 0.1;
 const SENSITIVITY: f32 = 0.1;
 
+#[cfg(not(target_arch = "wasm32"))]
+const MOUSE_WHEEL_SENSITIVITY: f32 = 1.0;
+#[cfg(target_arch = "wasm32")]
+const MOUSE_WHEEL_SENSITIVITY: f32 = 0.1;
+
 pub struct App {
     param: ray_tracer::Param,
     stat: Arc<Mutex<ray_tracer::Stat>>,
@@ -248,7 +253,7 @@ impl eframe::App for App {
                         _ => {}
                     },
                     egui::Event::MouseWheel { delta, .. } => {
-                        self.param.camera.fov -= delta.y * 10.0 * SENSITIVITY;
+                        self.param.camera.fov -= delta.y * MOUSE_WHEEL_SENSITIVITY;
                         self.param.camera.fov = self.param.camera.fov.clamp(10.0, 120.0);
                     }
                     _ => {}

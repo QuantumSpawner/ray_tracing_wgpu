@@ -1,0 +1,29 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-bindgen-cli
+      
+      - name: Build
+        run: |
+          cargo build --target wasm32-unknown-unknown --release
+          wasm-bindgen target/wasm32-unknown-unknown/release/ray_tracing_wgpu.wasm --out-dir web --web
+
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web
