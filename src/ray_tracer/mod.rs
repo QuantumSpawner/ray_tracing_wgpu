@@ -4,9 +4,12 @@ mod scene;
 mod shader_type;
 mod util;
 
-use std::{collections::HashMap, mem::size_of, time::Duration};
+use std::{collections::HashMap, mem::size_of};
 
-use crate::{timer::Instant, wgpu};
+use crate::{
+    time::{Duration, Instant},
+    wgpu,
+};
 
 const WORKGROUP_SIZE_X: u32 = 16;
 const WORKGROUP_SIZE_Y: u32 = 16;

@@ -2,9 +2,23 @@
 
 ![](docs/weekend_scene.png)
 
-A simple ray tracing implementation in Rust using WGPU, inspired by the [Ray Tracing in One Weekend Series](https://raytracing.github.io/) series.
+A simple ray tracing implementation in Rust using WGPU, inspired by the [_Ray Tracing in One Weekend Series_](https://raytracing.github.io/) series.
 
 ## Running the Project
+
+This project runs directly in the browser which can be accessed at [the projrct's GitHub Pages](https://quantumspawner.github.io/ray_tracing_wgpu).
+
+> [!WARNING]
+> Currently only supports Chrome and Edge since they are the only browsers that support WebGPU. Checkout [WebGPU Implementation Status](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status) for more details.
+
+### Camera and Render Controls
+
+- Move the camera using WASD keys.
+- Pan the camera by dragging the mouse.
+- Change field of view using the mouse wheel.
+- Adjust other parameters in the control panel.
+
+## Building the Project
 
 ### Prerequisites
 
@@ -49,13 +63,6 @@ Install rust compiler `rustc` and builder/package manager `cargo` from [Install 
     ```
     The application will be available at `http://localhost:8080`.
 
-## Controls
-
-- Move the camera using WASD keys.
-- Pan the camera by dragging the mouse.
-- Change field of view using the mouse wheel.
-- Adjust other parameters in the control panel.
-
 ## Project Structure
 
 ### Rust
@@ -69,15 +76,19 @@ It has a great ecosystem for system programming, providing numerous crates (Rust
 - [cgmath](https://docs.rs/cgmath/latest/cgmath): Math library for graphics applications.
 - [encase](https://docs.rs/encase/latest/encase): Utility library that serializes Rust structures to conform to WebGPU memory alignment requirements.
 
+Additionally, the integration with WebAssembly (WASM) means not only can it run natively on the desktop, but it can also be compiled to WebAssembly for running in the browser.
+
+### WebGPU
+
+WebGPU is the modern replacement of WebGL for graphics programming in the browser. And its implementation in Rust [wgpu](https://wgpu.rs), is one of the most mature and cross-platform graphics libraries available in Rust.
+
+Both the rendering and compute pipelines of WebGPU are used in this project where the compute pipeline is used for ray tracing calculations, and passing the results via storage buffers to the rendering pipeline for displaying the final image.
+
 ### Graphics
 
-This project implements all ray tracing features in [Ray Tracing in One Weekend](https://raytracing.github.io/books/RayTracingInOneWeekend.html), including three types of materials (lambertian, metal, and dielectric), and rendering spheres.
+This project implements all ray tracing features in [_Ray Tracing in One Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html), including three types of materials (lambertian, metal, and dielectric), and rendering spheres.
 
-To be continued...
-
-### Web Compatibility
-
-TDB
+Additionally, it implements bounding volume hierarchy (BVH) for acceleration, which is a necessity with the added feature of rendering models built from triangles.
 
 ## References
 
@@ -95,4 +106,4 @@ TDB
 
 ### WebAssembly
 
-- [egui 的基本使用 & egui 编译成 wasm](https://zhuanlan.zhihu.com/p/31819069353)
+- Blog: [egui 的基本使用 & egui 编译成 wasm](https://zhuanlan.zhihu.com/p/31819069353)
