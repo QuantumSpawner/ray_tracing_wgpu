@@ -1,3 +1,7 @@
 /target
+/web/*
+
+!/web/index.html
+!/web/docker-compose.yaml
 
 Cargo.lock

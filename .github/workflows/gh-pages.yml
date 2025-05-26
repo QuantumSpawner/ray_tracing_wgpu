@@ -23,10 +23,10 @@ jobs:
       - name: Build
         run: |
           RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknown-unknown --release
-          wasm-bindgen target/wasm32-unknown-unknown/release/ray_tracing_wgpu.wasm --out-dir ./web --web
+          wasm-bindgen target/wasm32-unknown-unknown/release/ray_tracing_wgpu.wasm --out-dir web --web
 
       - name: Publish to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./web
+          publish_dir: web
