@@ -2,11 +2,11 @@
 
 ![](docs/weekend_scene.png)
 
-A simple ray tracing implementation in Rust using WGPU, inspired by the [_Ray Tracing in One Weekend Series_](https://raytracing.github.io/) series.
+A simple ray tracing implementation in Rust using WGPU, inspired by the [_Ray Tracing in One Weekend Series_](https://raytracing.github.io).
 
 ## Running the Project
 
-This project runs directly in the browser which can be accessed at [the projrct's GitHub Pages](https://quantumspawner.github.io/ray_tracing_wgpu).
+This project runs directly in the browser which can be accessed at [this projrct's GitHub Pages](https://quantumspawner.github.io/ray_tracing_wgpu).
 
 > [!WARNING]
 > Currently only supports Chrome and Edge since they are the only browsers that support WebGPU. Checkout [WebGPU Implementation Status](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status) for more details.
@@ -45,23 +45,27 @@ Install rust compiler `rustc` and builder/package manager `cargo` from [Install 
 ### Build for Web
 
 1. Add the `wasm32-unknown-unknown` target and install `web-bindgen` tool by:
+
     ```bash
     rustup target add wasm32-unknown-unknown
     cargo install wasm-bindgen-cli
     ```
 
 2. Build and generate bindings for the web by:
+
     ```bash
-    RUSTFLAGS='--cfg getrandom_backend="wasm_js"' cargo build --target wasm32-unknown-unknown --release
+    cargo build --target wasm32-unknown-unknown --release
     wasm-bindgen target/wasm32-unknown-unknown/release/ray_tracing_wgpu.wasm --out-dir web --web
     ```
 
 3. Serve the `web` directory using a web server. The provided method is to use `nginx` in a `docker` container:
+
     ```bash
     cd web
     docker compose up -d
     ```
-    The application will be available at `http://localhost:8080`.
+
+    The application will be available at [http://localhost:8080](http://localhost:8080).
 
 ## Project Structure
 
@@ -94,12 +98,12 @@ Additionally, it implements bounding volume hierarchy (BVH) for acceleration, wh
 
 ### WebGPU/WGPU
 
-- Tutorials: [WebGPU Fundamentals](https://webgpufundamentals.org/)
-- Tutorials: [Learn Wgpu](https://sotrh.github.io/learn-wgpu/)
+- Tutorials: [WebGPU Fundamentals](https://webgpufundamentals.org)
+- Tutorials: [Learn Wgpu](https://sotrh.github.io/learn-wgpu)
 
 ### Ray Tracing
 
-- Books: [Ray Tracing in One Weekend Series](https://raytracing.github.io/)
+- Books: [Ray Tracing in One Weekend Series](https://raytracing.github.io)
 - GitHub: [Nelarius/weekend-raytracer-wgpu](https://github.com/Nelarius/weekend-raytracer-wgpu)
 - GitHub: [gnikoloff/webgpu-raytracer](https://github.com/gnikoloff/webgpu-raytracer)
 - Tutorial: [Ray-Tracing: Rendering a Triangle](https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html)
