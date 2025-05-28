@@ -27,6 +27,7 @@ Install rust compiler `rustc` and builder/package manager `cargo` from [Install 
 ### Build for Desktop
 
 1. (For Linux systems) Install dependencies by:
+
     ```bash
     sudo apt-get install -y \
         libclang-dev \
@@ -38,6 +39,7 @@ Install rust compiler `rustc` and builder/package manager `cargo` from [Install 
     ```
 
 2. Build and run the project by:
+
     ```bash
     cargo run --release
     ```
