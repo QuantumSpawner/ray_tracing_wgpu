@@ -4,12 +4,9 @@
 
 A simple ray tracing implementation in Rust using WGPU, inspired by the [_Ray Tracing in One Weekend Series_](https://raytracing.github.io).
 
-## Running the Project
+## Try Out the Project!
 
-This project runs directly in the browser which can be accessed at [this projrct's GitHub Pages](https://quantumspawner.github.io/ray_tracing_wgpu).
-
-> [!WARNING]
-> Currently only supports Chrome and Edge since they are the only browsers that support WebGPU. Checkout [WebGPU Implementation Status](https://github.com/gpuweb/gpuweb/wiki/Implementation-Status) for more details.
+Try out the result of this project from [this project's GitHub Pages](https://quantumspawner.github.io/ray_tracing_wgpu).
 
 ### Camera and Render Controls
 
